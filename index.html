@@ -702,28 +702,44 @@ function setMeta(){
 
 // ── FIREBASE LOAD ──────────────────────────────────────
 async function loadFromFirebase(){
-  if(!fbDb){setDbStatus("err","Firebase não disponível");return;}
-  showSync("Carregando dados...","Buscando CT-es no Firebase",10);
-  setDbStatus("sync","Carregando...");
+  // Garante que upload zone está sempre acessível
+  document.getElementById("upload-zone").style.display="block";
+
+  if(!fbDb){
+    setDbStatus("err","Firebase indisponível — use importação local");
+    return;
+  }
+
+  setDbStatus("sync","Conectando ao Firebase...");
+
+  // Timeout de 8 segundos — se Firebase não responder, libera a UI
+  const timeoutId = setTimeout(()=>{
+    setDbStatus("err","Timeout — importe XMLs manualmente");
+    toast("⚠ Firebase não respondeu. Você pode importar XMLs normalmente.",6000);
+  }, 8000);
+
   try{
     const snap = await fbDb.collection(COL).orderBy("emissao","desc").get();
-    setSync(80,"Processando "+snap.size+" registros...");
+    clearTimeout(timeoutId);
+
     allCTes = snap.docs.map(d=>d.data());
-    setSync(100,"Concluído!");
-    setTimeout(hideSync,500);
-    setDbStatus("ok","Firebase ● "+allCTes.length+" CTes sincronizados");
     document.getElementById("tb-total").textContent=allCTes.length.toLocaleString("pt-BR")+" CTes";
+    setDbStatus("ok","Firebase ● "+allCTes.length+" CTes");
+
     if(allCTes.length>0){
       document.getElementById("upload-zone").style.display="none";
       updateTopbar();
       renderAll(getView());
-      toast("✓ "+allCTes.length.toLocaleString("pt-BR")+" CT-es carregados",4000);
+      toast("✓ "+allCTes.length.toLocaleString("pt-BR")+" CT-es carregados do Firebase",4000);
+    } else {
+      setDbStatus("ok","Firebase conectado — base vazia");
+      toast("Firebase conectado. Importe seus XMLs para começar.",4000);
     }
   }catch(e){
-    hideSync();
-    setDbStatus("err","Erro: "+e.message);
-    toast("⚠ Erro Firebase: "+e.message,7000);
-    console.error(e);
+    clearTimeout(timeoutId);
+    setDbStatus("err","Erro Firebase — importe XMLs localmente");
+    toast("⚠ Erro Firebase: "+e.message+" — você ainda pode importar XMLs.",7000);
+    console.error("Firebase load error:",e);
   }
 }
 
@@ -934,46 +950,72 @@ function dropFiles(e){e.preventDefault();document.getElementById("upload-zone").
 
 async function handleFiles(files){
   if(!files||files.length===0)return;
-  showSync("Importando XMLs...","Processamento paralelo — "+files.length+" arquivo(s)",5);
-  setDbStatus("sync","Importando...");
   const arr=Array.from(files);
-  let parsed=0,added=0,skip=0;
 
-  // Importação paralela (lotes de 20)
-  const BATCH=20;
+  // Para 1 arquivo: processa sem overlay (mais rápido e sem travar)
+  // Para múltiplos: usa overlay com progresso
+  const usarOverlay = arr.length > 3;
+  if(usarOverlay){
+    showSync("Importando XMLs...","Processamento paralelo — "+arr.length+" arquivo(s)",5);
+  }
+  setDbStatus("sync","Importando "+arr.length+" arquivo(s)...");
+
+  let parsed=0, added=0, duplicados=0, invalidos=0;
   const results=[];
-  for(let i=0;i<arr.length;i+=BATCH){
-    const chunk=arr.slice(i,i+BATCH);
-    const batch=await Promise.all(chunk.map(f=>f.text().then(txt=>parseCTe(txt,f.name)).catch(()=>null)));
-    results.push(...batch);
-    parsed+=chunk.length;
-    setSync(Math.round(parsed/arr.length*60),"Processando "+parsed+"/"+arr.length);
+
+  try{
+    const BATCH=20;
+    for(let i=0;i<arr.length;i+=BATCH){
+      const chunk=arr.slice(i,i+BATCH);
+      const batchRes=await Promise.all(
+        chunk.map(f=>f.text().then(txt=>parseCTe(txt,f.name)).catch(err=>{
+          console.warn("Erro lendo arquivo:",f.name,err);
+          return null;
+        }))
+      );
+      results.push(...batchRes);
+      parsed+=chunk.length;
+      if(usarOverlay) setSync(Math.round(parsed/arr.length*60),"Processando "+parsed+"/"+arr.length);
+    }
+
+    const existing=new Set(allCTes.map(c=>c.chave));
+    const novos=[];
+    results.forEach(r=>{
+      if(!r){invalidos++;return;}
+      if(existing.has(r.chave)){duplicados++;return;}
+      novos.push(r);added++;
+    });
+
+    if(usarOverlay) setSync(85,"Atualizando painel...");
+    allCTes=[...novos,...allCTes];
+    pendingSave=[...novos,...pendingSave];
+
+  }catch(err){
+    console.error("handleFiles error:",err);
+    if(usarOverlay) hideSync();
+    setDbStatus("err","Erro na importação");
+    toast("⚠ Erro ao ler arquivos: "+err.message,6000);
+    return;
   }
 
-  const existing=new Set(allCTes.map(c=>c.chave));
-  const novos=[];
-  let duplicados=0,invalidos=0;
-  results.forEach(r=>{
-    if(!r){invalidos++;return;}
-    if(existing.has(r.chave)){duplicados++;return;}
-    novos.push(r);added++;
-  });
+  if(usarOverlay) hideSync();
 
-  setSync(70,"Adicionando "+added+" CT-es...");
-  allCTes=[...novos,...allCTes];
-  pendingSave=[...novos,...pendingSave];
-  setSync(90,"Atualizando painel...");
-
-  setTimeout(()=>{
-    hideSync();
-    setDbStatus("sync","Pendente salvar: "+pendingSave.length);
+  // Feedback de resultado
+  if(added>0){
     document.getElementById("btn-save").style.display="inline-flex";
-    document.getElementById("tb-total").textContent=allCTes.length.toLocaleString("pt-BR")+" CTes";
     document.getElementById("upload-zone").style.display="none";
+    document.getElementById("tb-total").textContent=allCTes.length.toLocaleString("pt-BR")+" CTes";
+    setDbStatus("sync","💾 "+added+" novos — clique em Salvar Firebase");
     updateTopbar();
     renderAll(getView());
-    toast("✓ +"+added+" CT-es importados | "+duplicados+" duplicados | "+invalidos+" inválidos | "+allCTes.length+" total",6000);
-  },300);
+    toast("✓ +"+added+" importados | "+duplicados+" duplicados | "+invalidos+" inválidos",6000);
+  } else if(duplicados>0 && invalidos===0){
+    setDbStatus("ok","Firebase ● todos já cadastrados");
+    toast("Todos os "+duplicados+" CT-es já existem na base. Nenhum adicionado.",5000);
+  } else {
+    setDbStatus("err","Nenhum CT-e válido encontrado");
+    toast("⚠ "+invalidos+" arquivo(s) inválido(s) · "+duplicados+" duplicados · verifique se são XML de CT-e válidos.",7000);
+  }
 }
 
 // ── VIEW / PERIOD ──────────────────────────────────────
@@ -1507,6 +1549,9 @@ function exportPDF(){
 }
 
 // ── INIT ───────────────────────────────────────────────
+// Garante UI disponível imediatamente — Firebase carrega em background
+document.getElementById("upload-zone").style.display="block";
+setDbStatus("sync","Conectando...");
 loadFromFirebase();
 </script>
 </body>
