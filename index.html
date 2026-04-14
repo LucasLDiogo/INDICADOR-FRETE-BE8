@@ -101,10 +101,11 @@ header{background:rgba(10,13,20,.95);backdrop-filter:blur(12px);border-bottom:1p
 .kpi-semaforo.green{background:var(--ok2);color:var(--ok)}
 .kpi-semaforo.yellow{background:var(--warn2);color:var(--warn)}
 .kpi-semaforo.red{background:var(--danger2);color:var(--danger)}
-/* TOOLTIP */
-.kpi-tt{display:none;position:absolute;top:calc(100% + 8px);left:0;background:var(--s3);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:14px 16px;min-width:230px;max-width:300px;box-shadow:0 12px 40px rgba(0,0,0,.5);z-index:500;font-size:12px;line-height:1.6;pointer-events:none}
-.kpi-tt::before{content:'';position:absolute;top:-6px;left:18px;border:6px solid transparent;border-top:none;border-bottom-color:var(--s3)}
+/* TOOLTIP — sempre acima do card */
+.kpi-tt{display:none;position:absolute;bottom:calc(100% + 10px);left:0;background:var(--s3);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:14px 16px;min-width:240px;max-width:310px;box-shadow:0 -4px 40px rgba(0,0,0,.6);z-index:9999;font-size:12px;line-height:1.6;pointer-events:none}
+.kpi-tt::after{content:'';position:absolute;bottom:-7px;left:18px;border:7px solid transparent;border-bottom:none;border-top-color:var(--s3)}
 .kpi-card:hover .kpi-tt{display:block}
+.kpi-card:hover{z-index:100}
 .tt-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px}
 .tt-row{display:flex;justify-content:space-between;gap:12px;padding:3px 0;border-bottom:1px solid var(--border)}
 .tt-row:last-child{border-bottom:none}
@@ -299,7 +300,10 @@ footer span{color:var(--teal)}
   <div class="fg"><label>De</label><input type="date" id="f-de"></div>
   <div class="fg"><label>Até</label><input type="date" id="f-ate"></div>
   <div class="fg"><label>Transportadora</label><select id="f-transp"><option value="">Todas</option></select></div>
-  <div class="fg"><label>Destino</label><select id="f-dest"><option value="">Todos</option></select></div>
+  <div class="fg"><label>Remetente</label><select id="f-rem"><option value="">Todos</option></select></div>
+  <div class="fg"><label>Destinatário</label><select id="f-dest"><option value="">Todos</option></select></div>
+  <div class="fg"><label>Origem (Cidade)</label><select id="f-orig-cidade"><option value="">Todas</option></select></div>
+  <div class="fg"><label>Destino (Cidade)</label><select id="f-dest-cidade"><option value="">Todas</option></select></div>
   <div class="fg"><label>Produto</label><select id="f-produto"><option value="">Todos</option></select></div>
   <button class="btn-f" onclick="applyFilters()">Filtrar</button>
   <button class="btn-clr" onclick="clearFilters()">Limpar</button>
@@ -394,8 +398,22 @@ footer span{color:var(--teal)}
   <div class="kpi-card kg">
     <div class="kpi-label">Peso Médio CTe</div>
     <div class="kpi-value" id="kv-pesomed">—</div>
-    <div class="kpi-sub">kg por documento</div>
+    <div class="kpi-sub">por documento</div>
     <div class="kpi-tt"><div class="tt-title">Peso Médio por Transportadora</div><div id="tt-pesomed"></div></div>
+  </div>
+  <!-- KPI: Valor Mercadoria -->
+  <div class="kpi-card kt">
+    <div class="kpi-label">Valor Mercadoria</div>
+    <div class="kpi-value" id="kv-vmerc">—</div>
+    <div class="kpi-sub">total transportado</div>
+    <div class="kpi-tt"><div class="tt-title">Valor da Mercadoria</div><div id="tt-vmerc"><div class="tt-row"><span class="tt-k">Soma vCarga CTes</span><span class="tt-v t">—</span></div></div></div>
+  </div>
+  <!-- KPI: % Frete / Mercadoria -->
+  <div class="kpi-card kw">
+    <div class="kpi-label">% Frete / Mercadoria</div>
+    <div class="kpi-value" id="kv-pctmerc">—</div>
+    <div class="kpi-sub">custo relativo do frete</div>
+    <div class="kpi-tt"><div class="tt-title">Frete ÷ Valor Mercadoria</div><div id="tt-pctmerc"><div class="tt-row"><span class="tt-k">Quanto do valor da merc. é frete</span><span class="tt-v y">—</span></div></div></div>
   </div>
 </div>
 
@@ -500,10 +518,10 @@ footer span{color:var(--teal)}
 <div class="cg w60">
   <div class="card">
     <div class="card-header">
-      <div><div class="card-title">📍 Top Destinos por Frete</div><div class="card-subtitle">Ranking de destinos com eficiência R$/kg</div></div>
+      <div><div class="card-title">📍 Top Destinos (Cidade) por Frete</div><div class="card-subtitle">Ranking com eficiência R$/kg · % Frete/Mercadoria</div></div>
     </div>
-    <div class="card-body">
-      <div id="wrap-dest" style="overflow-y:auto;max-height:320px"></div>
+    <div class="card-body" style="padding:8px 12px">
+      <div id="wrap-dest" style="overflow-y:auto;max-height:340px"></div>
     </div>
   </div>
   <div class="card">
@@ -516,16 +534,36 @@ footer span{color:var(--teal)}
   </div>
 </div>
 
+<!-- ROTA ORIGEM x DESTINO -->
+<div class="cg full" style="margin-bottom:14px">
+  <div class="card">
+    <div class="card-header">
+      <div><div class="card-title">🗺️ Rotas: Origem × Destino</div><div class="card-subtitle">Top rotas por volume de frete · custo R$/kg por corredor</div></div>
+    </div>
+    <div class="table-wrap" id="tbl-ori-dest"></div>
+  </div>
+</div>
+
 <!-- TABELAS -->
-<div class="sec">Detalhamento</div>
+<div class="sec">Detalhamento por Transportadora e Destino</div>
 <div class="cg">
   <div class="card">
     <div class="card-header"><div class="card-title">Por Transportadora</div></div>
     <div class="table-wrap" id="tbl-t"></div>
   </div>
   <div class="card">
-    <div class="card-header"><div class="card-title">Por Destino</div></div>
+    <div class="card-header"><div class="card-title">Por Cidade Destino</div></div>
     <div class="table-wrap" id="tbl-d"></div>
+  </div>
+</div>
+
+<div class="sec">Insights de Performance</div>
+<div class="card" style="margin-bottom:14px">
+  <div class="card-header">
+    <div><div class="card-title">⚡ Análise de Performance e Insights</div><div class="card-subtitle">Métricas avançadas geradas automaticamente</div></div>
+  </div>
+  <div class="card-body" id="insights-panel">
+    <div style="color:var(--muted);font-size:12px">Carregando insights...</div>
   </div>
 </div>
 
@@ -533,7 +571,7 @@ footer span{color:var(--teal)}
 <div class="card">
   <div class="card-header">
     <div class="card-title">Lista de CT-e</div>
-    <input type="text" class="btn" id="search-cte" placeholder="🔍 Buscar..." onkeyup="searchCTe(this.value)" style="min-width:200px;text-align:left;background:var(--s2)">
+    <input type="text" class="btn" id="search-cte" placeholder="🔍 Buscar transportadora, remetente, destino, produto..." onkeyup="searchCTe(this.value)" style="min-width:280px;text-align:left;background:var(--s2)">
   </div>
   <div class="table-wrap" id="tbl-cte"></div>
 </div>
@@ -615,6 +653,16 @@ const grp = (a,f) => a.reduce((acc,v)=>{const k=f(v);if(!acc[k])acc[k]=[];acc[k]
 const sumF = (a,k) => a.reduce((s,v)=>s+(v[k]||0),0);
 const fmt = v => v.toLocaleString("pt-BR",{style:"currency",currency:"BRL",minimumFractionDigits:2});
 const fmtK = v => {if(Math.abs(v)>=1e6)return(v/1e6).toFixed(1)+"M";if(Math.abs(v)>=1e3)return(v/1e3).toFixed(1)+"K";return v.toFixed(0);};
+// Peso formatado: kg → mostra em kg ou t com separador de milhar
+const fmtPeso = kg => {
+  if(kg===0)return"—";
+  if(kg>=1000){
+    const t=kg/1000;
+    return t.toLocaleString("pt-BR",{maximumFractionDigits:0})+" t";
+  }
+  return kg.toLocaleString("pt-BR",{maximumFractionDigits:1})+" kg";
+};
+const fmtPct = v => v.toFixed(2)+"%";
 const fmtRpkg = v => "R$ "+v.toFixed(2)+"/kg";
 function dC(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 let _tt;
@@ -747,7 +795,6 @@ function parseCTe(xmlText,fname){
     const doc=new DOMParser().parseFromString(xmlText,"application/xml");
     if(doc.querySelector("parsererror"))return null;
 
-    // Helper: busca tag em qualquer namespace
     const getTag=(root,tag)=>{
       const byNS=root.getElementsByTagNameNS("http://www.portalfiscal.inf.br/cte",tag);
       if(byNS&&byNS.length>0)return byNS[0].textContent.trim();
@@ -763,7 +810,6 @@ function parseCTe(xmlText,fname){
       return null;
     };
 
-    // Encontra o elemento raiz infCte
     const infCte=getEl(doc,"infCte");
     if(!infCte)return null;
 
@@ -780,16 +826,25 @@ function parseCTe(xmlText,fname){
     const UFIni=ide?getTag(ide,"UFIni"):"";
     const UFFim=ide?getTag(ide,"UFFim"):"";
 
-    // ── EMITENTE (quem emitiu o CT-e = transportadora) ──
+    // ── EMITENTE = transportadora ──
     const emit=getEl(infCte,"emit");
-    const transpNome=emit?(getTag(emit,"xNome")||getTag(emit,"xFant")):"N/I";
+    const transpNome=emit?(getTag(emit,"xNome")||getTag(emit,"xFant")||"N/I"):"N/I";
     const transpCnpj=emit?normC(getTag(emit,"CNPJ")||getTag(emit,"CPF")):"";
 
-    // ── TOMADOR / REMETENTE / DESTINATÁRIO ──
+    // ── REMETENTE (quem enviou a mercadoria) ──
     const rem=getEl(infCte,"rem");
+    const remNome=rem?(getTag(rem,"xNome")||"N/I"):"N/I";
+    const remCnpj=rem?normC(getTag(rem,"CNPJ")||getTag(rem,"CPF")):"";
+    // Cidade/UF origem do remetente
+    const remEnder=rem?getEl(rem,"enderReme"):null;
+    const origCidade=remEnder?(getTag(remEnder,"xMun")||UFIni):UFIni;
+
+    // ── DESTINATÁRIO ──
     const dest=getEl(infCte,"dest");
-    const destNome=dest?(getTag(dest,"xNome")||"N/I"):(rem?getTag(rem,"xNome"):"N/I");
+    const destNome=dest?(getTag(dest,"xNome")||"N/I"):"N/I";
     const destCnpj=dest?normC(getTag(dest,"CNPJ")||getTag(dest,"CPF")):"";
+    const destEnder=dest?getEl(dest,"enderDest"):null;
+    const destCidade=destEnder?(getTag(destEnder,"xMun")||UFFim):UFFim;
 
     // ── VALOR DO FRETE ──
     const vPrest=getEl(infCte,"vPrest");
@@ -800,27 +855,38 @@ function parseCTe(xmlText,fname){
     }
     if(!frete)frete=parseFloat(getTag(infCte,"vTPrest")||getTag(infCte,"vRec")||"0")||0;
 
-    // ── PESO ──
-    let peso=0;
-    // Tenta infCarga > infQ
+    // ── VALOR DA MERCADORIA ──
+    let valorMerc=0;
     const infCarga=getEl(infCte,"infCarga");
     if(infCarga){
-      const infQs=infCarga.getElementsByTagNameNS("http://www.portalfiscal.inf.br/cte","infQ");
-      const infQsLocal=infCarga.getElementsByTagName("infQ");
-      const qs=infQs.length>0?infQs:infQsLocal;
+      valorMerc=parseFloat(getTag(infCarga,"vCarga")||"0")||0;
+    }
+    // fallback em infNFe/vNF
+    if(!valorMerc){
+      const infNFeList=infCte.getElementsByTagNameNS("http://www.portalfiscal.inf.br/cte","infNFe");
+      const infNFeListL=infCte.getElementsByTagName("infNFe");
+      const nfeEls=infNFeList.length>0?infNFeList:infNFeListL;
+      let sum=0;
+      for(let i=0;i<nfeEls.length;i++){sum+=parseFloat(getTag(nfeEls[i],"vNF")||getTag(nfeEls[i],"vBC")||"0")||0;}
+      if(sum>0)valorMerc=sum;
+    }
+
+    // ── PESO ──
+    let peso=0;
+    if(infCarga){
+      const infQsNS=infCarga.getElementsByTagNameNS("http://www.portalfiscal.inf.br/cte","infQ");
+      const infQsL=infCarga.getElementsByTagName("infQ");
+      const qs=infQsNS.length>0?infQsNS:infQsL;
       for(let i=0;i<qs.length;i++){
         const q=qs[i];
         const cUnid=getTag(q,"cUnid");
         const qCarga=parseFloat(getTag(q,"qCarga")||"0")||0;
-        if(cUnid==="01"){peso=qCarga*1000;break;} // ton → kg
-        if(cUnid==="03"){peso=qCarga;break;}       // kg
-        if(cUnid==="02"){peso=qCarga;break;}       // m3 (usa como referência)
-        if(qCarga>0){peso=qCarga;}                 // qualquer valor
+        if(cUnid==="01"&&qCarga>0){peso=qCarga*1000;break;}
+        if(cUnid==="03"&&qCarga>0){peso=qCarga;break;}
+        if(cUnid==="02"&&qCarga>0){peso=qCarga;break;}
+        if(qCarga>0){peso=qCarga;}
       }
-      // fallback: vCarga como último recurso de peso
-      if(!peso){const vc=parseFloat(getTag(infCarga,"vCarga")||"0")||0;if(vc>0&&vc<100000)peso=vc;}
     }
-    // fallback: tot > qNF ou pTot
     if(!peso){
       const tot=getEl(infCte,"tot");
       if(tot){
@@ -829,24 +895,33 @@ function parseCTe(xmlText,fname){
       }
     }
 
-    // ── PRODUTO / NATUREZA ──
+    // ── PRODUTO (campo xProd / descProd / natOp) ──
+    // Prioridade: xProd das NF referenciadas > natOp do ide > infCarga/xProd
     let produto="";
-    // natOp no ide
-    if(ide)produto=getTag(ide,"natOp");
-    // infNFe natOp
-    if(!produto){const infNFe=getEl(infCte,"infNFe");if(infNFe)produto=getTag(infNFe,"natOp");}
-    // xProd genérico
+    // 1) xProd dentro de infNFe ou infNF
+    const infNFeAll=infCte.getElementsByTagNameNS("http://www.portalfiscal.inf.br/cte","infNFe");
+    const infNFeAllL=infCte.getElementsByTagName("infNFe");
+    const nfeAll=infNFeAll.length>0?infNFeAll:infNFeAllL;
+    for(let i=0;i<nfeAll.length&&!produto;i++){produto=getTag(nfeAll[i],"xProd")||getTag(nfeAll[i],"natOp");}
+    // 2) xProd direto no infCte
     if(!produto)produto=getTag(infCte,"xProd");
+    // 3) natOp do ide
+    if(!produto&&ide)produto=getTag(ide,"natOp");
+    // 4) infCarga > xProd
+    if(!produto&&infCarga)produto=getTag(infCarga,"xProd")||getTag(infCarga,"proPred");
     if(!produto)produto="NÃO INFORMADO";
 
     const cpkg=peso>0?frete/peso:0;
+    const pctMerc=valorMerc>0?frete/valorMerc*100:0;
 
     return{
-      chave,nCTe,emissao,frete,peso,cpkg,
-      transpNome:transpNome||"N/I",transpCnpj,
-      destNome:destNome||"N/I",destCnpj,
-      origUF:UFIni||"",destUF:UFFim||UFIni||"",
-      produto:produto.toUpperCase().trim().substring(0,40),
+      chave,nCTe,emissao,frete,peso,cpkg,valorMerc,pctMerc,
+      transpNome,transpCnpj,
+      remNome,remCnpj,
+      destNome,destCnpj,
+      origCidade:origCidade||UFIni||"",origUF:UFIni||"",
+      destCidade:destCidade||UFFim||"",destUF:UFFim||"",
+      produto:produto.toUpperCase().trim().substring(0,50),
       fname
     };
   }catch(e){console.warn("parseCTe error:",fname,e);return null;}
@@ -932,26 +1007,38 @@ function updateTopbar(){
 // ── FILTERS ───────────────────────────────────────────
 function populateFilters(ctes){
   const all=allCTes;
-  const transps=[...new Set(all.map(c=>c.transpNome))].sort();
-  const dests=[...new Set(all.map(c=>c.destNome))].sort();
-  const prods=[...new Set(all.map(c=>c.produto||""))].filter(Boolean).sort();
-  const sel=id=>{const e=document.getElementById(id);const v=e.value;return{e,v};};
-  const setOpts=(e,arr,cur)=>{const prev=e.value;e.innerHTML='<option value="">Todos</option>'+arr.map(x=>`<option value="${x}"${x===cur?"selected":""}>${x}</option>`).join("");};
-  setOpts(document.getElementById("f-transp"),transps,sel("f-transp").v);
-  setOpts(document.getElementById("f-dest"),dests,sel("f-dest").v);
-  setOpts(document.getElementById("f-produto"),prods,sel("f-produto").v);
+  const transps=[...new Set(all.map(c=>c.transpNome))].filter(Boolean).sort();
+  const rems=[...new Set(all.map(c=>c.remNome||""))].filter(Boolean).sort();
+  const dests=[...new Set(all.map(c=>c.destNome||""))].filter(Boolean).sort();
+  const origCidades=[...new Set(all.map(c=>c.origCidade||""))].filter(Boolean).sort();
+  const destCidades=[...new Set(all.map(c=>c.destCidade||""))].filter(Boolean).sort();
+  const prods=[...new Set(all.map(c=>c.produto||""))].filter(v=>v&&v!=="NÃO INFORMADO").sort();
+  const getV=id=>{const e=document.getElementById(id);return e?e.value:"";};
+  const setOpts=(id,arr)=>{const e=document.getElementById(id);if(!e)return;const cur=e.value;e.innerHTML='<option value="">Todos</option>'+arr.map(x=>`<option value="${x}"${x===cur?"selected":""}>${x}</option>`).join("");};
+  setOpts("f-transp",transps);
+  setOpts("f-rem",rems);
+  setOpts("f-dest",dests);
+  setOpts("f-orig-cidade",origCidades);
+  setOpts("f-dest-cidade",destCidades);
+  setOpts("f-produto",prods);
 }
 function applyFilters(){
   const s=document.getElementById("f-de").value;
   const e=document.getElementById("f-ate").value;
   const t=document.getElementById("f-transp").value;
+  const r=document.getElementById("f-rem").value;
   const d=document.getElementById("f-dest").value;
+  const oc=document.getElementById("f-orig-cidade").value;
+  const dc=document.getElementById("f-dest-cidade").value;
   const p=document.getElementById("f-produto").value;
   filteredCTes=getView().filter(c=>{
     if(s&&c.emissao<s)return false;
     if(e&&c.emissao>e)return false;
     if(t&&c.transpNome!==t)return false;
+    if(r&&c.remNome!==r)return false;
     if(d&&c.destNome!==d)return false;
+    if(oc&&c.origCidade!==oc)return false;
+    if(dc&&c.destCidade!==dc)return false;
     if(p&&c.produto!==p)return false;
     return true;
   });
@@ -978,45 +1065,44 @@ function renderAll(ctes){
   renderDow(data);
   renderProdutos(ctes);
   renderDest(data);
+  renderInsights(data);
   renderTblT(data);
   renderTblCTe(data);
 }
 
 // ── KPIs ───────────────────────────────────────────────
 function renderKPIs(ctes){
-  const tot=ctes.reduce((s,c)=>({f:s.f+c.frete,p:s.p+c.peso}),{f:0,p:0});
+  const tot=ctes.reduce((s,c)=>({f:s.f+c.frete,p:s.p+c.peso,m:s.m+(c.valorMerc||0)}),{f:0,p:0,m:0});
   const cpkg=tot.p>0?tot.f/tot.p:0;
+  const pctMerc=tot.m>0?tot.f/tot.m*100:0;
   const ticket=ctes.length>0?tot.f/ctes.length:0;
   const pesomed=ctes.length>0?tot.p/ctes.length:0;
   const transps=[...new Set(ctes.map(c=>c.transpNome))];
   const byT=grp(ctes,c=>c.transpNome);
-  const byD=grp(ctes,c=>c.destNome);
+  const byD=grp(ctes,c=>c.destCidade||c.destNome||"N/I");
   const byP=grp(ctes,c=>c.produto||"N/I");
 
   document.getElementById("kv-frete").textContent=fmt(tot.f);
-  document.getElementById("kv-frete-sub").textContent=fmtK(tot.f);
+  document.getElementById("kv-frete-sub").textContent="Total acumulado";
   document.getElementById("kv-qtd").textContent=ctes.length.toLocaleString("pt-BR");
-  document.getElementById("kv-peso").textContent=(tot.p/1000).toFixed(2)+"t";
+  document.getElementById("kv-peso").textContent=fmtPeso(tot.p);
   document.getElementById("kv-cpkg").textContent=fmtRpkg(cpkg);
   document.getElementById("kv-ticket").textContent=fmt(ticket);
   document.getElementById("kv-transp").textContent=transps.length;
-  document.getElementById("kv-pesomed").textContent=(pesomed).toFixed(1)+" kg";
+  document.getElementById("kv-pesomed").textContent=fmtPeso(pesomed);
+  // KPI valor mercadoria
+  const kvm=document.getElementById("kv-vmerc");if(kvm)kvm.textContent=tot.m>0?fmt(tot.m):"N/D";
+  // KPI % frete/merc
+  const kvp=document.getElementById("kv-pctmerc");if(kvp)kvp.textContent=tot.m>0?pctMerc.toFixed(2)+"%":"N/D";
 
   // Semáforo custo
   const sc=semaforo(cpkg);
   const semEl=document.getElementById("sem-cpkg");
-  semEl.style.display="inline-flex";
-  semEl.className="kpi-semaforo "+sc;
-  semEl.textContent=semLabel(sc);
+  semEl.style.display="inline-flex";semEl.className="kpi-semaforo "+sc;semEl.textContent=semLabel(sc);
 
   // Acumulado 3 meses
   const now=new Date(),y=now.getFullYear(),m=now.getMonth()+1;
-  const m3=allCTes.filter(c=>{
-    if(!c.emissao)return false;
-    const [cy,cm]=c.emissao.split("-").map(Number);
-    const diff=(y-cy)*12+(m-cm);
-    return diff>=0&&diff<3;
-  });
+  const m3=allCTes.filter(c=>{if(!c.emissao)return false;const[cy,cm]=c.emissao.split("-").map(Number);return(y-cy)*12+(m-cm)<3&&(y-cy)*12+(m-cm)>=0;});
   const acum=m3.reduce((s,c)=>s+c.frete,0);
   document.getElementById("kv-acum").textContent=fmt(acum);
   document.getElementById("kv-acum-sub").textContent="últimos 3 meses";
@@ -1030,19 +1116,17 @@ function renderKPIs(ctes){
   if(efTop){document.getElementById("kv-ef").textContent=efTop.k.substring(0,18);document.getElementById("kv-ef-sub").textContent=fmtRpkg(efTop.cpkg);}
 
   // Meta
-  const acimaMeta=ctes.filter(c=>c.cpkg>metaRpkg).length;
+  const acimaMeta=ctes.filter(c=>c.cpkg>metaRpkg&&c.cpkg>0).length;
   const pctAcima=ctes.length?acimaMeta/ctes.length*100:0;
   document.getElementById("kv-meta-pct").textContent=acimaMeta.toLocaleString("pt-BR");
-  document.getElementById("kv-meta-txt").textContent="CTes acima de R$"+metaRpkg.toFixed(2)+"/kg";
+  document.getElementById("kv-meta-txt").textContent="CTes acima de "+fmtRpkg(metaRpkg);
   const smeta=pctAcima<10?"green":pctAcima<30?"yellow":"red";
   const semMeta=document.getElementById("sem-meta");
-  semMeta.style.display="inline-flex";
-  semMeta.className="kpi-semaforo "+smeta;
-  semMeta.textContent=pctAcima.toFixed(1)+"% acima da meta";
+  semMeta.style.display="inline-flex";semMeta.className="kpi-semaforo "+smeta;semMeta.textContent=pctAcima.toFixed(1)+"% acima da meta";
 
   // Top produto
   const prodTop=Object.entries(byP).map(([k,v])=>({k,p:sumF(v,"peso"),n:v.length})).sort((a,b)=>b.p-a.p)[0];
-  if(prodTop){document.getElementById("kv-prod").textContent=prodTop.k.substring(0,18);document.getElementById("kv-prod-sub").textContent=(prodTop.p/1000).toFixed(1)+"t";}
+  if(prodTop){document.getElementById("kv-prod").textContent=prodTop.k.substring(0,18);document.getElementById("kv-prod-sub").textContent=fmtPeso(prodTop.p);}
 
   // Tooltips
   const ttR=(arr,disp,cls)=>arr.map(e=>`<div class="tt-row"><span class="tt-k">${e.k}</span><span class="tt-v ${cls?cls(e):""}">${disp(e)}</span></div>`).join("");
@@ -1051,17 +1135,17 @@ function renderKPIs(ctes){
 
   document.getElementById("tt-frete").innerHTML=ttR(topT(v=>sumF(v,"frete")),e=>fmt(e.v));
   document.getElementById("tt-qtd").innerHTML=ttR(topT(v=>v.length),e=>String(e.v));
-  document.getElementById("tt-peso").innerHTML=ttR(topD(v=>sumF(v,"peso")),e=>(e.v/1000).toFixed(2)+"t");
+  document.getElementById("tt-peso").innerHTML=ttR(topD(v=>sumF(v,"peso")),e=>fmtPeso(e.v));
   const cpkgTop=Object.entries(byT).map(([k,v])=>{const f=sumF(v,"frete"),p=sumF(v,"peso");return{k,v:p>0?f/p:0};}).filter(e=>e.v>0).sort((a,b)=>b.v-a.v).slice(0,5);
   document.getElementById("tt-cpkg").innerHTML=ttR(cpkgTop,e=>fmtRpkg(e.v),e=>semaforo(e.v));
   document.getElementById("tt-ticket").innerHTML=ttR(topT(v=>sumF(v,"frete")/v.length),e=>fmt(e.v));
   document.getElementById("tt-transp").innerHTML=transps.slice(0,7).map(t=>{const v=byT[t];const f=sumF(v,"frete"),p=sumF(v,"peso"),cp=p>0?f/p:0;return`<div class="tt-row"><span class="tt-k">${t}</span><span class="tt-v ${semaforo(cp)}">${fmtRpkg(cp)}</span></div>`;}).join("");
-  document.getElementById("tt-acum").innerHTML=ttR(topT(v=>sumF(v,"frete")),e=>fmt(e.v));
+  document.getElementById("tt-acum").innerHTML=`<div class="tt-row"><span class="tt-k">Total 3 meses</span><span class="tt-v t">${fmt(acum)}</span></div><div class="tt-row"><span class="tt-k">CTes</span><span class="tt-v">${m3.length}</span></div>`;
   document.getElementById("tt-dest").innerHTML=ttR(topD(v=>sumF(v,"frete")),e=>fmt(e.v));
   document.getElementById("tt-ef").innerHTML=Object.entries(byT).map(([k,v])=>{const f=sumF(v,"frete"),p=sumF(v,"peso");return{k,v:p>0?f/p:999};}).filter(e=>e.v<999).sort((a,b)=>a.v-b.v).slice(0,5).map(e=>`<div class="tt-row"><span class="tt-k">${e.k}</span><span class="tt-v g">${fmtRpkg(e.v)}</span></div>`).join("");
   document.getElementById("tt-meta").innerHTML=`<div class="tt-row"><span class="tt-k">Meta R$/kg</span><span class="tt-v t">${fmtRpkg(metaRpkg)}</span></div><div class="tt-row"><span class="tt-k">Acima da meta</span><span class="tt-v ${smeta}">${acimaMeta} CTes (${pctAcima.toFixed(1)}%)</span></div><div class="tt-row"><span class="tt-k">Dentro da meta</span><span class="tt-v g">${ctes.length-acimaMeta} CTes</span></div>`;
-  document.getElementById("tt-prod").innerHTML=Object.entries(byP).map(([k,v])=>({k,p:sumF(v,"peso")})).sort((a,b)=>b.p-a.p).slice(0,5).map(e=>`<div class="tt-row"><span class="tt-k">${e.k}</span><span class="tt-v t">${(e.p/1000).toFixed(2)}t</span></div>`).join("");
-  document.getElementById("tt-pesomed").innerHTML=Object.entries(byT).map(([k,v])=>({k,v:v.length?sumF(v,"peso")/v.length:0})).sort((a,b)=>b.v-a.v).slice(0,5).map(e=>`<div class="tt-row"><span class="tt-k">${e.k}</span><span class="tt-v">${e.v.toFixed(1)} kg</span></div>`).join("");
+  document.getElementById("tt-prod").innerHTML=Object.entries(byP).map(([k,v])=>({k,p:sumF(v,"peso")})).sort((a,b)=>b.p-a.p).slice(0,5).map(e=>`<div class="tt-row"><span class="tt-k">${e.k}</span><span class="tt-v t">${fmtPeso(e.p)}</span></div>`).join("");
+  document.getElementById("tt-pesomed").innerHTML=Object.entries(byT).map(([k,v])=>({k,v:v.length?sumF(v,"peso")/v.length:0})).sort((a,b)=>b.v-a.v).slice(0,5).map(e=>`<div class="tt-row"><span class="tt-k">${e.k}</span><span class="tt-v">${fmtPeso(e.v)}</span></div>`).join("");
 }
 
 // ── ALERTS ─────────────────────────────────────────────
@@ -1154,31 +1238,222 @@ function filterProd(p){activeProd=p;renderAll(getView());}
 
 // ── DESTINOS ───────────────────────────────────────────
 function renderDest(ctes){
-  const byD=grp(ctes,c=>c.destNome);const totF=ctes.reduce((s,c)=>s+c.frete,0);
-  const entries=Object.entries(byD).map(([k,v])=>({k,f:sumF(v,"frete"),p:sumF(v,"peso"),n:v.length,cpkg:sumF(v,"peso")>0?sumF(v,"frete")/sumF(v,"peso"):0,uf:v[0].destUF||""})).sort((a,b)=>b.f-a.f).slice(0,15);
+  const byD=grp(ctes,c=>c.destCidade||c.destUF||c.destNome||"N/I");
+  const totF=ctes.reduce((s,c)=>s+c.frete,0);
+  const entries=Object.entries(byD).map(([k,v])=>({
+    k,f:sumF(v,"frete"),p:sumF(v,"peso"),m:sumF(v,"valorMerc"),
+    n:v.length,cpkg:sumF(v,"peso")>0?sumF(v,"frete")/sumF(v,"peso"):0,
+    uf:v[0]?v[0].destUF||"":""
+  })).sort((a,b)=>b.f-a.f).slice(0,20);
   const mx=entries[0]?entries[0].f:1;
-  document.getElementById("wrap-dest").innerHTML=entries.map((e,i)=>{const s=semaforo(e.cpkg);return`<div class="rbar-row"><span class="rbar-rank">${i+1}</span><span class="rbar-name">${e.k}${e.uf?" ("+e.uf+")":""}</span><div class="rbar-bg"><div class="rbar-fill" style="width:${(e.f/mx*100).toFixed(1)}%;background:var(--teal)"></div></div><span class="rbar-pct" style="font-size:10px;color:var(--teal)">${fmt(e.f)}</span><span class="rbar-cnt ${s==="green"?"":""}">`;}).join("")||"<div style='color:var(--muted);padding:10px'>Sem dados</div>";
-  // Tabela completa
-  document.getElementById("wrap-dest").innerHTML=entries.map((e,i)=>{const s=semaforo(e.cpkg);const cls=s==="green"?"b-g":s==="yellow"?"b-w":"b-d";return`<div class="rbar-row" style="gap:6px"><span class="rbar-rank">${i+1}</span><span class="rbar-name" style="flex:2">${e.k}</span><span style="font-size:10px;color:var(--muted);min-width:24px">${e.uf}</span><div class="rbar-bg"><div class="rbar-fill" style="width:${(e.f/mx*100).toFixed(1)}%"></div></div><span style="font-size:10px;font-family:var(--mono);min-width:80px;text-align:right">${fmt(e.f)}</span><span class="badge ${cls}" style="min-width:70px;text-align:center">${fmtRpkg(e.cpkg)}</span></div>`;}).join("") || "<div style='color:var(--muted);padding:10px'>Sem dados</div>";
+
+  // Ranking visual
+  document.getElementById("wrap-dest").innerHTML=entries.map((e,i)=>{
+    const s=semaforo(e.cpkg);const cls=s==="green"?"b-g":s==="yellow"?"b-w":"b-d";
+    const pctM=e.m>0?e.f/e.m*100:0;const pc=pctM>5?"b-d":pctM>2?"b-w":"b-g";
+    return`<div class="rbar-row" style="gap:5px;flex-wrap:wrap">
+      <span class="rbar-rank">${i+1}</span>
+      <span class="rbar-name" style="flex:2;min-width:80px">${e.k}</span>
+      <span style="font-size:9px;color:var(--muted);min-width:22px">${e.uf}</span>
+      <div class="rbar-bg" style="min-width:60px"><div class="rbar-fill" style="width:${(e.f/mx*100).toFixed(1)}%"></div></div>
+      <span style="font-size:10px;font-family:var(--mono);min-width:78px;text-align:right;color:var(--teal)">${fmt(e.f)}</span>
+      <span class="badge ${cls}" style="min-width:70px;text-align:center">${fmtRpkg(e.cpkg)}</span>
+      ${pctM>0?`<span class="badge ${pc}" style="min-width:46px;text-align:center">${pctM.toFixed(1)}%</span>`:""}
+    </div>`;
+  }).join("")||"<div style='color:var(--muted);padding:10px'>Sem dados</div>";
+
+  // Tabela destinos
+  const tblDEl=document.getElementById("tbl-d");
+  if(tblDEl){
+    tblDEl.innerHTML=`<table><thead><tr>
+      <th>Cidade Destino</th><th>UF</th><th>CTes</th>
+      <th>Peso</th><th>Val. Merc.</th><th>Frete</th>
+      <th>% Fr/Merc</th><th>R$/kg</th>
+    </tr></thead><tbody>${entries.map(e=>{
+      const s=semaforo(e.cpkg);const c=s==="green"?"b-g":s==="yellow"?"b-w":"b-d";
+      const pctM=e.m>0?e.f/e.m*100:0;const pc=pctM>5?"b-d":pctM>2?"b-w":"b-g";
+      return`<tr>
+        <td style="font-weight:600">${e.k}</td>
+        <td>${e.uf}</td>
+        <td class="num">${e.n}</td>
+        <td class="num">${fmtPeso(e.p)}</td>
+        <td class="num">${e.m>0?fmt(e.m):"—"}</td>
+        <td class="num">${fmt(e.f)}</td>
+        <td class="num">${pctM>0?`<span class="badge ${pc}">${pctM.toFixed(2)}%</span>`:"—"}</td>
+        <td class="num"><span class="badge ${c}">${fmtRpkg(e.cpkg)}</span></td>
+      </tr>`;}).join("")}</tbody></table>`;
+  }
+
+  // Tabela Origem × Destino
+  const oriDestEl=document.getElementById("tbl-ori-dest");
+  if(oriDestEl){
+    const byOD=grp(ctes,c=>`${c.origCidade||c.origUF||"?"}|||${c.destCidade||c.destUF||"?"}`);
+    const odEntries=Object.entries(byOD).map(([k,v])=>{
+      const [orig,dest]=k.split("|||");
+      return{orig,dest,f:sumF(v,"frete"),p:sumF(v,"peso"),m:sumF(v,"valorMerc"),n:v.length,cpkg:sumF(v,"peso")>0?sumF(v,"frete")/sumF(v,"peso"):0,transp:[...new Set(v.map(x=>x.transpNome))].slice(0,2).join(", ")};
+    }).sort((a,b)=>b.f-a.f).slice(0,20);
+    oriDestEl.innerHTML=`<table><thead><tr>
+      <th>Origem</th><th>Destino</th><th>Transportadoras</th>
+      <th>CTes</th><th>Peso</th><th>Val. Merc.</th><th>Frete</th>
+      <th>% Fr/Merc</th><th>R$/kg</th>
+    </tr></thead><tbody>${odEntries.map(e=>{
+      const s=semaforo(e.cpkg);const c=s==="green"?"b-g":s==="yellow"?"b-w":"b-d";
+      const pctM=e.m>0?e.f/e.m*100:0;const pc=pctM>5?"b-d":pctM>2?"b-w":"b-g";
+      return`<tr>
+        <td style="font-weight:600;color:var(--teal)">${e.orig}</td>
+        <td style="font-weight:600">${e.dest}</td>
+        <td style="font-size:10px;color:var(--muted)">${e.transp}</td>
+        <td class="num">${e.n}</td>
+        <td class="num">${fmtPeso(e.p)}</td>
+        <td class="num">${e.m>0?fmt(e.m):"—"}</td>
+        <td class="num">${fmt(e.f)}</td>
+        <td class="num">${pctM>0?`<span class="badge ${pc}">${pctM.toFixed(2)}%</span>`:"—"}</td>
+        <td class="num"><span class="badge ${c}">${fmtRpkg(e.cpkg)}</span></td>
+      </tr>`;}).join("")}</tbody></table>`;
+  }
 }
 
 // ── TABELAS ────────────────────────────────────────────
 function renderTblT(ctes){
   const byT=grp(ctes,c=>c.transpNome);const totF=ctes.reduce((s,c)=>s+c.frete,0);
-  const rows=Object.entries(byT).map(([k,v])=>{const f=sumF(v,"frete"),p=sumF(v,"peso"),cpkg=p>0?f/p:0;return{k,f,p,cpkg,n:v.length};}).sort((a,b)=>b.f-a.f);
-  document.getElementById("tbl-t").innerHTML=`<table><thead><tr><th>Transportadora</th><th>CTes</th><th>Frete Total</th><th>Peso Total</th><th>R$/kg</th><th>Share</th></tr></thead><tbody>${rows.map(r=>{const s=semaforo(r.cpkg);const c=s==="green"?"b-g":s==="yellow"?"b-w":"b-d";return`<tr><td style="font-weight:600">${r.k}</td><td class="num">${r.n}</td><td class="num">${fmt(r.f)}</td><td class="num">${(r.p/1000).toFixed(2)}t</td><td class="num"><span class="badge ${c}">${fmtRpkg(r.cpkg)}</span></td><td class="num">${totF>0?(r.f/totF*100).toFixed(1)+"%":"—"}</td></tr>`;}).join("")}</tbody></table>`;
+  const rows=Object.entries(byT).map(([k,v])=>{
+    const f=sumF(v,"frete"),p=sumF(v,"peso"),m=sumF(v,"valorMerc"),cpkg=p>0?f/p:0,pctM=m>0?f/m*100:0;
+    return{k,f,p,m,cpkg,pctM,n:v.length};
+  }).sort((a,b)=>b.f-a.f);
+  document.getElementById("tbl-t").innerHTML=`<table><thead><tr>
+    <th>Transportadora</th><th>CTes</th><th>Peso Total</th>
+    <th>Val. Mercadoria</th><th>Frete Total</th>
+    <th>% Fr/Merc</th><th>R$/kg</th><th>Share</th>
+  </tr></thead><tbody>${rows.map(r=>{
+    const s=semaforo(r.cpkg);const c=s==="green"?"b-g":s==="yellow"?"b-w":"b-d";
+    const pc=r.pctM>5?"b-d":r.pctM>2?"b-w":"b-g";
+    return`<tr>
+      <td style="font-weight:600">${r.k}</td>
+      <td class="num">${r.n}</td>
+      <td class="num">${fmtPeso(r.p)}</td>
+      <td class="num">${r.m>0?fmt(r.m):"—"}</td>
+      <td class="num">${fmt(r.f)}</td>
+      <td class="num">${r.pctM>0?`<span class="badge ${pc}">${r.pctM.toFixed(2)}%</span>`:"—"}</td>
+      <td class="num"><span class="badge ${c}">${fmtRpkg(r.cpkg)}</span></td>
+      <td class="num">${totF>0?(r.f/totF*100).toFixed(1)+"%":"—"}</td>
+    </tr>`;}).join("")}</tbody></table>`;
 }
 let _cteSearch="";
 function searchCTe(v){_cteSearch=v;renderTblCTe(getView());}
 function renderTblCTe(ctes){
   let data=ctes;
-  if(_cteSearch){const q=_cteSearch.toLowerCase();data=ctes.filter(c=>c.nCTe?.toLowerCase().includes(q)||c.transpNome?.toLowerCase().includes(q)||c.destNome?.toLowerCase().includes(q)||c.produto?.toLowerCase().includes(q));}
-  data=data.slice(0,200);
-  document.getElementById("tbl-cte").innerHTML=`<table><thead><tr><th>Data</th><th>Nº CT-e</th><th>Transportadora</th><th>Destino</th><th>Produto</th><th>Peso</th><th>Frete</th><th>R$/kg</th></tr></thead><tbody>${data.map(r=>{const s=semaforo(r.cpkg);const c=s==="green"?"b-g":s==="yellow"?"b-w":"b-d";return`<tr><td>${r.emissao||"—"}</td><td style="font-family:var(--mono);font-size:11px">${r.nCTe||"—"}</td><td>${r.transpNome}</td><td>${r.destNome}</td><td><span class="badge b-t" style="font-size:9px">${(r.produto||"—").substring(0,20)}</span></td><td class="num">${r.peso?r.peso.toFixed(1)+" kg":"—"}</td><td class="num">${fmt(r.frete)}</td><td class="num"><span class="badge ${c}">${r.cpkg>0?fmtRpkg(r.cpkg):"—"}</span></td></tr>`;}).join("")}</tbody></table>`;
+  if(_cteSearch){const q=_cteSearch.toLowerCase();data=ctes.filter(c=>c.nCTe?.toLowerCase().includes(q)||c.transpNome?.toLowerCase().includes(q)||c.remNome?.toLowerCase().includes(q)||c.destNome?.toLowerCase().includes(q)||c.produto?.toLowerCase().includes(q)||c.origCidade?.toLowerCase().includes(q)||c.destCidade?.toLowerCase().includes(q));}
+  data=data.slice(0,300);
+  document.getElementById("tbl-cte").innerHTML=`<table><thead><tr>
+    <th>Data</th><th>Nº CT-e</th><th>Transportadora</th>
+    <th>Remetente</th><th>Destinatário</th>
+    <th>Origem</th><th>Destino</th>
+    <th>Produto</th><th>Peso</th>
+    <th>Val. Merc.</th><th>Frete</th>
+    <th>% Fr/Merc</th><th>R$/kg</th>
+  </tr></thead><tbody>${data.map(r=>{
+    const s=semaforo(r.cpkg);const c=s==="green"?"b-g":s==="yellow"?"b-w":"b-d";
+    const pctM=r.valorMerc>0?r.frete/r.valorMerc*100:0;
+    const pctMcls=pctM>5?"b-d":pctM>2?"b-w":"b-g";
+    return`<tr>
+      <td style="white-space:nowrap">${r.emissao||"—"}</td>
+      <td style="font-family:var(--mono);font-size:10px">${r.nCTe||"—"}</td>
+      <td style="font-size:11px">${r.transpNome}</td>
+      <td style="font-size:11px">${r.remNome||"—"}</td>
+      <td style="font-size:11px">${r.destNome}</td>
+      <td style="font-size:11px">${r.origCidade||r.origUF||"—"}</td>
+      <td style="font-size:11px">${r.destCidade||r.destUF||"—"}</td>
+      <td><span class="badge b-t" style="font-size:9px">${(r.produto||"—").substring(0,22)}</span></td>
+      <td class="num">${r.peso>0?fmtPeso(r.peso):"—"}</td>
+      <td class="num">${r.valorMerc>0?fmt(r.valorMerc):"—"}</td>
+      <td class="num">${fmt(r.frete)}</td>
+      <td class="num">${pctM>0?`<span class="badge ${pctMcls}">${pctM.toFixed(2)}%</span>`:"—"}</td>
+      <td class="num"><span class="badge ${c}">${r.cpkg>0?fmtRpkg(r.cpkg):"—"}</span></td>
+    </tr>`;}).join("")}</tbody></table>`;
 }
 
 // ── MODAL ──────────────────────────────────────────────
 function mTab(n){document.querySelectorAll(".mtab").forEach((t,i)=>t.classList.toggle("active",i===n));document.querySelectorAll(".mtab-content").forEach((t,i)=>t.classList.toggle("active",i===n));}
+
+// ── INSIGHTS DE PERFORMANCE ────────────────────────────
+function renderInsights(ctes){
+  const el=document.getElementById("insights-panel");
+  if(!el||ctes.length===0){if(el)el.innerHTML='<div style="color:var(--muted);font-size:12px">Sem dados suficientes para gerar insights.</div>';return;}
+
+  const byT=grp(ctes,c=>c.transpNome);
+  const byD=grp(ctes,c=>c.destCidade||c.destUF||c.destNome||"N/I");
+  const byM={};ctes.forEach(c=>{if(!c.emissao)return;const m=c.emissao.substring(0,7);if(!byM[m])byM[m]={f:0,p:0,n:0,m:0};byM[m].f+=c.frete;byM[m].p+=c.peso;byM[m].n++;byM[m].m+=c.valorMerc||0;});
+  const ms=Object.keys(byM).sort();
+  const totF=ctes.reduce((s,c)=>s+c.frete,0);
+  const totP=ctes.reduce((s,c)=>s+c.peso,0);
+  const totM=ctes.reduce((s,c)=>s+(c.valorMerc||0),0);
+  const avgCpkg=totP>0?totF/totP:0;
+
+  // Tendência mês a mês
+  let tendencia="";
+  if(ms.length>=2){
+    const ult=byM[ms[ms.length-1]],ant=byM[ms[ms.length-2]];
+    const varF=ant.f>0?(ult.f-ant.f)/ant.f*100:0;
+    const varCp=(ant.p>0?ant.f/ant.p:0)>0?((ult.p>0?ult.f/ult.p:0)-(ant.p>0?ant.f/ant.p:0))/(ant.p>0?ant.f/ant.p:0)*100:0;
+    tendencia=`<div class="insight-item ${varF>0?"warn":"ok"}">
+      <div class="ins-icon">${varF>0?"📈":"📉"}</div>
+      <div><div class="ins-title">Tendência de Frete</div>
+      <div class="ins-body">Último mês vs anterior: <strong style="color:${varF>0?"var(--warn)":"var(--ok)}">${varF>0?"+":""}${varF.toFixed(1)}%</strong> em valor · custo R$/kg ${varCp>0?"subiu":"caiu"} ${Math.abs(varCp).toFixed(1)}%</div></div>
+    </div>`;
+  }
+
+  // Concentração de transportadora
+  const transpArr=Object.entries(byT).map(([k,v])=>({k,f:sumF(v,"frete")})).sort((a,b)=>b.f-a.f);
+  const top1pct=transpArr.length&&totF>0?transpArr[0].f/totF*100:0;
+  const concInsight=top1pct>60?
+    `<div class="insight-item warn"><div class="ins-icon">⚠️</div><div><div class="ins-title">Alta Concentração em Transportadora</div><div class="ins-body"><strong>${transpArr[0]?.k||""}</strong> responde por <strong style="color:var(--warn)">${top1pct.toFixed(1)}%</strong> do frete total. Considere diversificar para reduzir dependência e aumentar poder de negociação.</div></div></div>`:
+    `<div class="insight-item ok"><div class="ins-icon">✅</div><div><div class="ins-title">Diversificação de Transportadoras</div><div class="ins-body">Top transportadora com <strong style="color:var(--ok)">${top1pct.toFixed(1)}%</strong> do frete. Base distribuída entre <strong>${transpArr.length}</strong> transportadoras — risco controlado.</div></div></div>`;
+
+  // Eficiência comparativa (melhor vs pior R$/kg)
+  const cpkgArr=Object.entries(byT).map(([k,v])=>{const f=sumF(v,"frete"),p=sumF(v,"peso");return{k,cpkg:p>0?f/p:0,n:v.length};}).filter(e=>e.cpkg>0&&e.n>=2).sort((a,b)=>a.cpkg-b.cpkg);
+  let eficiencia="";
+  if(cpkgArr.length>=2){
+    const melhor=cpkgArr[0],pior=cpkgArr[cpkgArr.length-1];
+    const gap=pior.cpkg>0?(pior.cpkg-melhor.cpkg)/pior.cpkg*100:0;
+    eficiencia=`<div class="insight-item ${gap>30?"danger":"info"}"><div class="ins-icon">💡</div><div><div class="ins-title">Gap de Eficiência entre Transportadoras</div><div class="ins-body">Melhor: <strong style="color:var(--ok)">${melhor.k}</strong> com ${fmtRpkg(melhor.cpkg)} · Pior: <strong style="color:var(--danger)">${pior.k}</strong> com ${fmtRpkg(pior.cpkg)}. Gap de <strong>${gap.toFixed(0)}%</strong> — ${gap>30?"oportunidade significativa de renegociação":"diferença dentro do esperado"}.</div></div></div>`;
+  }
+
+  // % Frete sobre mercadoria
+  let freteMerc="";
+  if(totM>0){
+    const pct=totF/totM*100;
+    const cls=pct>5?"danger":pct>2?"warn":"ok";
+    freteMerc=`<div class="insight-item ${cls}"><div class="ins-icon">${pct>5?"🔴":pct>2?"🟡":"🟢"}</div><div><div class="ins-title">Custo de Frete sobre Mercadoria</div><div class="ins-body">O frete representa <strong style="color:var(--${cls==="ok"?"ok":cls==="warn"?"warn":"danger"})">${pct.toFixed(2)}%</strong> do valor da mercadoria transportada. ${pct>5?"Acima do ideal — revisar contratos urgente.":pct>2?"Em atenção — monitorar evolução.":"Dentro do esperado — boa gestão de custos."}</div></div></div>`;
+  }
+
+  // Rotas mais caras
+  const byOD=grp(ctes,c=>`${c.origCidade||c.origUF||"?"}→${c.destCidade||c.destUF||"?"}`);
+  const rotasCara=Object.entries(byOD).map(([k,v])=>{const f=sumF(v,"frete"),p=sumF(v,"peso"),cpkg=p>0?f/p:0;return{k,cpkg,n:v.length};}).filter(e=>e.cpkg>metaRpkg&&e.n>0).sort((a,b)=>b.cpkg-a.cpkg).slice(0,3);
+  const rotasInsight=rotasCara.length>0?
+    `<div class="insight-item danger"><div class="ins-icon">🛣️</div><div><div class="ins-title">Rotas com Maior Custo R$/kg</div><div class="ins-body">Rotas acima da meta (${fmtRpkg(metaRpkg)}): ${rotasCara.map(r=>`<strong>${r.k}</strong> (${fmtRpkg(r.cpkg)})`).join(" · ")}. Avaliar modal alternativo ou renegociação pontual.</div></div></div>`:
+    `<div class="insight-item ok"><div class="ins-icon">🛣️</div><div><div class="ins-title">Rotas dentro da Meta</div><div class="ins-body">Todas as rotas operando abaixo ou na meta de ${fmtRpkg(metaRpkg)}. Performance de custo excelente no período.</div></div></div>`;
+
+  // Peso médio e frequência
+  const medCTes=ctes.length>0?totP/ctes.length:0;
+  const freqInsight=`<div class="insight-item info"><div class="ins-icon">📦</div><div><div class="ins-title">Perfil das Cargas</div><div class="ins-body">Peso médio por CT-e: <strong>${fmtPeso(medCTes)}</strong> · Total transportado: <strong style="color:var(--teal)">${fmtPeso(totP)}</strong> em <strong>${ctes.length}</strong> documentos${totM>0?` · Valor de mercadoria: <strong>${fmt(totM)}</strong>`:""}.</div></div></div>`;
+
+  el.innerHTML=`
+  <style>
+    .insights-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media(max-width:800px){.insights-grid{grid-template-columns:1fr}}
+    .insight-item{display:flex;gap:10px;align-items:flex-start;padding:10px 13px;border-radius:8px;border:1px solid var(--border)}
+    .insight-item.ok{background:var(--ok2);border-color:rgba(34,197,94,.2)}
+    .insight-item.warn{background:var(--warn2);border-color:rgba(245,158,11,.2)}
+    .insight-item.danger{background:var(--danger2);border-color:rgba(239,68,68,.2)}
+    .insight-item.info{background:var(--teall);border-color:rgba(0,212,170,.2)}
+    .ins-icon{font-size:20px;flex-shrink:0;line-height:1}
+    .ins-title{font-size:11px;font-weight:700;color:var(--text);margin-bottom:3px}
+    .ins-body{font-size:11px;color:var(--muted);line-height:1.5}
+  </style>
+  <div class="insights-grid">
+    ${tendencia}${concInsight}${eficiencia}${freteMerc}${rotasInsight}${freqInsight}
+  </div>`;
+}
 
 // ── PDF ────────────────────────────────────────────────
 function exportPDF(){
