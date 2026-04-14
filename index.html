@@ -634,9 +634,30 @@ const firebaseConfig = {
   messagingSenderId: "787823147349",
   appId: "1:787823147349:web:e45f05e2dde93aa1e4d7dc"
 };
-firebase.initializeApp(firebaseConfig);
-const fbDb = firebase.firestore();
+
+// Inicializa Firebase evitando erro "app already exists" em cache/reload do GitHub Pages
+let fbApp, fbDb;
+try {
+  fbApp = firebase.apps.length > 0 ? firebase.app() : firebase.initializeApp(firebaseConfig);
+  fbDb = fbApp.firestore();
+} catch(e) {
+  console.error("Firebase init error:", e);
+  fbApp = null;
+  fbDb = null;
+}
+
 const COL = "ctes_be8";
+
+// Captura erros globais — evita que o script quebre silenciosamente
+window.onerror = function(msg, src, line, col, err) {
+  console.error("Erro global JS:", msg, "linha:", line);
+  const lbl = document.getElementById("db-label");
+  if(lbl) lbl.textContent = "Erro JS linha " + line + ": " + msg.substring(0,60);
+  // Upload zone continua acessível mesmo com erro
+  const uz = document.getElementById("upload-zone");
+  if(uz) uz.style.display = "block";
+  return false;
+};
 
 // ── CONSTANTES ─────────────────────────────────────────
 const ML = {1:"Jan",2:"Fev",3:"Mar",4:"Abr",5:"Mai",6:"Jun",7:"Jul",8:"Ago",9:"Set",10:"Out",11:"Nov",12:"Dez"};
@@ -755,7 +776,8 @@ async function saveToFirebase(ctes){
       batch.set(ref,{...c,savedAt:new Date().toISOString()});
     });
     await batch.commit();
-    setSync(30+Math.round((i+chunk.length)/ctes.length*65),"Salvando "+(i+chunk.length)+"/"+ctes.length);
+    setSync(30+Math.round((i+chunk.length)/ctes.length*65),"Salvando "+(i+chunk.length)+"/"+ctes.length+"...");
+    await new Promise(r=>setTimeout(r,0)); // yield para não bloquear UI
   }
 }
 async function manualSave(){
@@ -951,56 +973,61 @@ function dropFiles(e){e.preventDefault();document.getElementById("upload-zone").
 async function handleFiles(files){
   if(!files||files.length===0)return;
   const arr=Array.from(files);
+  const total=arr.length;
 
-  // Para 1 arquivo: processa sem overlay (mais rápido e sem travar)
-  // Para múltiplos: usa overlay com progresso
-  const usarOverlay = arr.length > 3;
+  // Para volumes grandes, processa em chunks e atualiza a UI
+  const usarOverlay = total > 1;
   if(usarOverlay){
-    showSync("Importando XMLs...","Processamento paralelo — "+arr.length+" arquivo(s)",5);
+    showSync("Importando "+total+" arquivo(s)...","Iniciando processamento paralelo...",2);
   }
-  setDbStatus("sync","Importando "+arr.length+" arquivo(s)...");
+  setDbStatus("sync","Importando "+total+" arquivo(s)...");
 
   let parsed=0, added=0, duplicados=0, invalidos=0;
-  const results=[];
+  const novos=[];
+  const existing=new Set(allCTes.map(c=>c.chave));
 
   try{
+    // Lotes de 20 em paralelo — processa todos sem travar a UI
     const BATCH=20;
     for(let i=0;i<arr.length;i+=BATCH){
       const chunk=arr.slice(i,i+BATCH);
       const batchRes=await Promise.all(
-        chunk.map(f=>f.text().then(txt=>parseCTe(txt,f.name)).catch(err=>{
-          console.warn("Erro lendo arquivo:",f.name,err);
-          return null;
-        }))
+        chunk.map(f=>f.text().then(txt=>parseCTe(txt,f.name)).catch(()=>null))
       );
-      results.push(...batchRes);
+      batchRes.forEach(r=>{
+        if(!r){invalidos++;return;}
+        if(existing.has(r.chave)){duplicados++;return;}
+        existing.add(r.chave); // evita duplicatas dentro do mesmo lote
+        novos.push(r);added++;
+      });
       parsed+=chunk.length;
-      if(usarOverlay) setSync(Math.round(parsed/arr.length*60),"Processando "+parsed+"/"+arr.length);
+
+      // Atualizar progresso a cada lote
+      const pct=Math.round(parsed/total*90);
+      if(usarOverlay) setSync(pct, `Processados: ${parsed}/${total} · Novos: ${added} · Inválidos: ${invalidos}`);
+
+      // Yield para não travar o browser (especialmente com 6000 arquivos)
+      if(i % 100 === 0 && i > 0){
+        await new Promise(r=>setTimeout(r,0));
+      }
     }
-
-    const existing=new Set(allCTes.map(c=>c.chave));
-    const novos=[];
-    results.forEach(r=>{
-      if(!r){invalidos++;return;}
-      if(existing.has(r.chave)){duplicados++;return;}
-      novos.push(r);added++;
-    });
-
-    if(usarOverlay) setSync(85,"Atualizando painel...");
-    allCTes=[...novos,...allCTes];
-    pendingSave=[...novos,...pendingSave];
-
   }catch(err){
     console.error("handleFiles error:",err);
     if(usarOverlay) hideSync();
-    setDbStatus("err","Erro na importação");
-    toast("⚠ Erro ao ler arquivos: "+err.message,6000);
+    setDbStatus("err","Erro na importação: "+err.message);
+    toast("⚠ Erro: "+err.message,6000);
     return;
   }
 
-  if(usarOverlay) hideSync();
+  // Incorpora ao array global
+  allCTes=[...novos,...allCTes];
+  pendingSave=[...novos,...pendingSave];
 
-  // Feedback de resultado
+  if(usarOverlay){
+    setSync(100,"Concluído! "+added+" CT-es adicionados");
+    setTimeout(hideSync, 800);
+  }
+
   if(added>0){
     document.getElementById("btn-save").style.display="inline-flex";
     document.getElementById("upload-zone").style.display="none";
@@ -1008,13 +1035,13 @@ async function handleFiles(files){
     setDbStatus("sync","💾 "+added+" novos — clique em Salvar Firebase");
     updateTopbar();
     renderAll(getView());
-    toast("✓ +"+added+" importados | "+duplicados+" duplicados | "+invalidos+" inválidos",6000);
+    toast(`✅ +${added} importados · ${duplicados} duplicados · ${invalidos} inválidos · Total: ${allCTes.length}`, 7000);
   } else if(duplicados>0 && invalidos===0){
-    setDbStatus("ok","Firebase ● todos já cadastrados");
-    toast("Todos os "+duplicados+" CT-es já existem na base. Nenhum adicionado.",5000);
+    setDbStatus("ok","Todos já cadastrados");
+    toast(`Todos os ${duplicados} CT-es já existem na base.`, 5000);
   } else {
     setDbStatus("err","Nenhum CT-e válido encontrado");
-    toast("⚠ "+invalidos+" arquivo(s) inválido(s) · "+duplicados+" duplicados · verifique se são XML de CT-e válidos.",7000);
+    toast(`⚠ ${invalidos} inválido(s) · ${duplicados} duplicados. Verifique se são XML de CT-e.`, 7000);
   }
 }
 
@@ -1549,10 +1576,12 @@ function exportPDF(){
 }
 
 // ── INIT ───────────────────────────────────────────────
-// Garante UI disponível imediatamente — Firebase carrega em background
-document.getElementById("upload-zone").style.display="block";
-setDbStatus("sync","Conectando...");
-loadFromFirebase();
+// Garante que todos os scripts externos (Firebase, Chart.js) carregaram antes de iniciar
+window.addEventListener('load', function() {
+  document.getElementById("upload-zone").style.display="block";
+  setDbStatus("sync","Conectando...");
+  loadFromFirebase();
+});
 </script>
 </body>
 </html>
