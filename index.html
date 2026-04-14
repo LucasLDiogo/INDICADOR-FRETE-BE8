@@ -252,6 +252,64 @@ td.tx{font-family:"Sora",sans-serif;font-size:11px}
   font-weight:700;color:var(--text0)}
 .perf-scroll tfoot td.td-name{font-family:"Sora",sans-serif;color:var(--acc1)}
 
+
+/* ═══ REDESIGN PROFISSIONAL ═══ */
+/* Gradiente de fundo mais rico */
+body::before{background:
+  radial-gradient(ellipse 70% 45% at 5% 15%,rgba(0,163,255,.07) 0%,transparent 55%),
+  radial-gradient(ellipse 50% 35% at 95% 85%,rgba(0,208,132,.07) 0%,transparent 55%),
+  radial-gradient(ellipse 40% 30% at 50% 50%,rgba(126,255,160,.03) 0%,transparent 60%) !important;}
+
+/* Summary cards melhorados */
+.sc{transition:transform .2s,box-shadow .2s}
+.sc:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,0,0,.5)}
+
+/* KPI cards melhorados */
+.kc-v{letter-spacing:-.02em}
+.kc::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,rgba(0,208,132,.4),transparent);opacity:0;transition:opacity .3s}
+.kc:hover::before{opacity:1}
+
+/* Chart containers com borda glow sutil */
+.cc{transition:border-color .2s,box-shadow .2s}
+.cc:hover{border-color:rgba(0,163,255,.3);box-shadow:0 4px 24px rgba(0,163,255,.08)}
+
+/* Tab buttons melhorados */
+.tab-btn{position:relative;letter-spacing:.02em}
+.tab-btn::after{content:"";position:absolute;bottom:-1px;left:0;right:0;height:2px;
+  background:var(--acc1);transform:scaleX(0);transition:transform .25s}
+.tab-btn.active::after{transform:scaleX(1)}
+.tab-btn.active{color:var(--acc1);font-weight:700}
+
+/* Header badge melhorado */
+.hdr-badge{background:linear-gradient(135deg,var(--bg3),var(--bg4));
+  border:1px solid rgba(0,163,255,.3);
+  box-shadow:0 0 12px rgba(0,163,255,.1);font-weight:700;color:#fff}
+
+/* OP pills redesenhadas */
+.op-pill{transition:transform .2s,box-shadow .2s}
+.op-pill:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.4)}
+
+/* Perf table hover highlight */
+.perf-scroll tbody tr{cursor:pointer}
+.perf-scroll tbody tr:hover td.td-name{color:var(--acc1)}
+
+/* Insight cards */
+.ic{transition:transform .2s,box-shadow .2s,border-color .2s}
+
+/* Filtros compactos com label colorida */
+.fl-lbl{color:var(--acc2);font-size:8.5px}
+
+/* Section title com linha decorativa */
+.sh .st{gap:9px;font-size:10.5px}
+
+/* Progress bar glow */
+.pb-f{box-shadow:0 0 12px rgba(0,208,132,.6),0 0 4px rgba(0,208,132,.3) !important}
+
+/* Tabela analítica */
+#data-tbl thead th{font-size:8.5px}
+#data-tbl tbody td{font-size:10px}
+
 </style>
 </head>
 <body>
@@ -304,7 +362,7 @@ td.tx{font-family:"Sora",sans-serif;font-size:11px}
     </div>
     <div class="fb-s"><div class="fb-dot" id="fb-dot"></div><span id="fb-lbl">Firebase...</span></div>
     <div class="hdr-badge" id="cte-ctr">0 CT-es</div>
-    <button class="btn btn-s" onclick="loadDemoData()" title="Carrega 63 CT-es simulados com múltiplas transportadoras, fornecedores, filiais e tipos de operação (COMPRA/VENDA/IMPORTAÇÃO) para testar todas as funcionalidades sem arquivos reais">⭐ Demo</button>
+    <button class="btn btn-s" onclick="loadDemoData()" title="Carrega 63 CT-es simulados com múltiplas transportadoras, fornecedores, filiais e tipos de operação (VENDA/COMPRA/TRANSFERÊNCIA) para testar todas as funcionalidades sem arquivos reais">⭐ Demo</button>
     <button class="btn btn-b" onclick="exportPDF()">📄 PDF</button>
     <button class="btn btn-w" onclick="exportInsightsPDF()">⭐ Insights PDF</button>
     <button class="btn btn-d" onclick="clearAll()">🗑</button>
@@ -335,14 +393,13 @@ td.tx{font-family:"Sora",sans-serif;font-size:11px}
         <div class="fl"><div class="fl-lbl">Trimestre</div><select class="fsel" id="f-tri" onchange="applyFilters()"><option value="">Todos</option></select></div>
         <div class="fl"><div class="fl-lbl">Tipo Operação</div>
           <select class="fsel" id="f-op" onchange="applyFilters()">
-            <option value="">Todos</option><option value="COMPRA">COMPRA</option>
-            <option value="VENDA">VENDA</option><option value="IMPORTAÇÃO">IMPORTAÇÃO</option><option value="OUTROS">OUTROS</option>
+            <option value="">Todos</option>
+            <option value="VENDA">VENDA</option>
+            <option value="COMPRA">COMPRA</option>
+            <option value="TRANSFERENCIA">TRANSFERÊNCIA</option>
+            <option value="OUTROS">OUTROS</option>
           </select></div>
-        <div class="fl"><div class="fl-lbl">Status Remetente</div>
-          <select class="fsel" id="f-srem" onchange="applyFilters()">
-            <option value="">Todos</option><option value="FILIAL">FILIAL</option>
-            <option value="FORNECEDOR">FORNECEDOR</option><option value="IMPOR/EXPOR">IMPOR/EXPOR</option>
-          </select></div>
+        
         <div class="fl"><div class="fl-lbl">Transportadora</div><select class="fsel" id="f-tr" onchange="applyFilters()"><option value="">Todas</option></select></div>
         <div class="fl"><div class="fl-lbl">Fornecedor</div><select class="fsel" id="f-fo" onchange="applyFilters()"><option value="">Todos</option></select></div>
         <div class="fl"><div class="fl-lbl">UF Destino</div><select class="fsel" id="f-uf" onchange="applyFilters()"><option value="">Todas</option></select></div>
@@ -417,12 +474,15 @@ td.tx{font-family:"Sora",sans-serif;font-size:11px}
       <!-- TRANSPORTADORAS -->
       <div id="tab-tr" class="tab-panel">
         <div class="ch2">
-          <div class="cc"><div class="ct">RANKING · VALOR FRETE</div><div class="cw t"><canvas id="c-tr-fr"></canvas></div></div>
-          <div class="cc"><div class="ct">RANKING · R$/kg</div><div class="cw t"><canvas id="c-tr-rk"></canvas></div></div>
+          <div class="cc"><div class="ct">RANKING · VALOR FRETE TOTAL</div><div class="cw t"><canvas id="c-tr-fr"></canvas></div></div>
+          <div class="cc"><div class="ct">RANKING · R$/kg MÉDIO</div><div class="cw t"><canvas id="c-tr-rk"></canvas></div></div>
         </div>
         <div class="ch2">
           <div class="cc"><div class="ct">RANKING · % FRETE/MERCADORIA</div><div class="cw t"><canvas id="c-tr-pc"></canvas></div></div>
-          <div class="cc s2"><div class="ct">COMPRA × VENDA × IMPORTAÇÃO</div><div class="cw"><canvas id="c-tr-cv"></canvas></div></div>
+          <div class="cc"><div class="ct">TICKET MÉDIO POR TRANSPORTADORA (R$)</div><div class="cw t"><canvas id="c-tr-ticket"></canvas></div></div>
+        </div>
+        <div class="ch2">
+          <div class="cc s2"><div class="ct">VENDA × COMPRA × TRANSFERÊNCIA POR TRANSPORTADORA</div><div class="cw"><canvas id="c-tr-cv"></canvas></div></div>
         </div>
       <div class="perf-section">
         <div class="perf-section-title">📋 Performance Detalhada</div>
@@ -660,10 +720,17 @@ try{
 // Key = CNPJ RAIZ 8 dígitos → NOME REDU
 const TL = {"17339465": "AG BRASIL", "22227957": "AGILLITRANS", "35827870": "AGROLOG", "82110818": "ALFA", "01004474": "ALIANCA", "87548038": "ANDERLE", "03266445": "ANTONIO", "10675648": "BASSUL", "59448973": "BIO  PARANA", "00428307": "EXPRESSO SÃO MIGUEL", "94001641": "BRINGER", "76667682": "BUDEL", "40192339": "COONECTA", "09911217": "COOPERATIVA D. VALE TAQUARI", "77269009": "CORDIOLLI", "94511987": "COTRAMAR - COOP", "11661294": "EQUIPE DE MUDANÇA", "30351359": "FOR PARTICIPAÇÕES", "07569161": "G10", "14117299": "GA MORENO", "38461704": "GA TRANS", "53057105": "GDF", "11027948": "GVM", "18336426": "IG", "17221804": "ILIMAK", "10313857": "J VANZ", "06125803": "JALE", "01851116": "JOAO", "02433453": "JORGINHO", "10452549": "JT", "32285535": "L CARLOS", "01967524": "LILIAN", "08919677": "MACANUDO", "56440711": "MAJUR", "05092071": "MANDIPETRO", "30862079": "ME LAGO", "07225160": "OSMAR", "80174840": "PRA FRENTE BRASIL", "14842667": "RAEDY", "30522092": "RENAN", "31380743": "RHSB", "39420370": "RIEDI", "17877334": "RODOFROTA", "17787572": "RODOLIMEIRA", "08771894": "RODOMA", "44914992": "RODONAVES", "39331815": "RUBY", "14299733": "S ALTOE", "01501729": "SANA", "78175734": "TABORDA", "05120387": "TIAGO RAFAELLI", "77184745": "TIC", "05089654": "TINDIANA", "08676690": "TRANSAMBIENTAL", "01937440": "TRANSPANORAMA", "23935495": "TRANSPODIESEL", "24950538": "TRANSRIPOLI", "05220925": "TRANSVIDAL", "02488357": "TURBO", "89317697": "TW", "14372807": "VDA", "07540132": "VELOZ", "01229029": "VIATERRES", "12407691": "VICOLOG", "07579098": "VITORIA", "26706177": "WAFRAN", "19793741": "ZANIVAN"};
 // Key = MATRIZ CNPJ 8 dígitos → {nome, status}
-const FL = {"07322382": {"nome": "BE8 MARIALVA", "status": "FILIAL"}, "08684263": {"nome": "BE8 NOVA MARILANDIA", "status": "FILIAL"}, "33931174": {"nome": "BE8 FLORIANO", "status": "FILIAL"}, "63228664": {"nome": "BE8 ALTO ARAGUAIA", "status": "FILIAL"}, "10629776": {"nome": "ZIEHLABEGG DO BRASIL IMPORTACAO", "status": "IMPOR/EXPOR"}, "56073055": {"nome": "Armstrong International do Brasil", "status": "IMPOR/EXPOR"}, "00012377": {"nome": "CEREAL RIO", "status": "FORNECEDOR"}, "00352294": {"nome": "INFRAERO", "status": "FORNECEDOR"}, "00398022": {"nome": "PRO ANALISE QUIMICA E DIAGNOSTICA", "status": "FORNECEDOR"}, "00536772": {"nome": "ECOLAB QUIMICA", "status": "FORNECEDOR"}, "00709920": {"nome": "TITO COMERCIO DE BOMBAS E ACESSORIOS", "status": "FORNECEDOR"}, "00919038": {"nome": "TECALL EQUIPAMENTOS INDUSTRIAIS", "status": "FORNECEDOR"}, "00993264": {"nome": "INTEGRADA", "status": "FORNECEDOR"}, "01041688": {"nome": "FLEXASEAL DO BRASIL", "status": "FORNECEDOR"}, "01315352": {"nome": "VALDIR GEREMIA IND E COM", "status": "FORNECEDOR"}, "01636140": {"nome": "EXPERT INDUSTRIAL E COM IMP AGE E REP", "status": "FORNECEDOR"}, "01682147": {"nome": "AVENORTE AVICOLA CIANORTE", "status": "FORNECEDOR"}, "02095850": {"nome": "GEA EQUIPAMENTOS E SOLUCOES", "status": "FORNECEDOR"}, "02227556": {"nome": "ROMAQ  COMERCIAL QUIMICA", "status": "FORNECEDOR"}, "02745845": {"nome": "INSTRUFARMA INSTRUMENTOS", "status": "FORNECEDOR"}, "02916265": {"nome": "JBS S", "status": "FORNECEDOR"}, "02987873": {"nome": "BOCCHI IND COM DE CEREAIS", "status": "FORNECEDOR"}, "02999886": {"nome": "CALLEGARO", "status": "FORNECEDOR"}, "03509766": {"nome": "TECSUL EQUIPAMENTOS E SERVICOS", "status": "FORNECEDOR"}, "03620220": {"nome": "GRATT INDUSTRIA DE MAQUINAS", "status": "FORNECEDOR"}, "03674465": {"nome": "AZ ARMATUREN DO BRASIL", "status": "FORNECEDOR"}, "04523508": {"nome": "VEGA BRASIL INDUSTRIA E COMERCIO", "status": "FORNECEDOR"}, "04805268": {"nome": "ACIPLAS COMERCIO DE EQUIPAMENTOS INDUSTRIAIS", "status": "FORNECEDOR"}, "04937518": {"nome": "MM COMERCIAL", "status": "FORNECEDOR"}, "05047273": {"nome": "ELETRONOR DISTRIB DE MAT ELETRICOS", "status": "FORNECEDOR"}, "05792912": {"nome": "ACC COMERCIO DE EQUIPAMENTOS INDUSTRIAIS", "status": "FORNECEDOR"}, "05965594": {"nome": "ACOPUMPS  ACOPLAMENTOS E BOMBAS", "status": "FORNECEDOR"}, "06023566": {"nome": "CRM PRODUTOS E SERVICOS INDUSTRIAIS", "status": "FORNECEDOR"}, "06159809": {"nome": "CELENA PASSO FUNDO", "status": "FORNECEDOR"}, "06315338": {"nome": "COFCO PASSO FUNDO", "status": "FORNECEDOR"}, "06347921": {"nome": "POLIPAS", "status": "FORNECEDOR"}, "06353241": {"nome": "SOMAVE AGROINDUSTRIAL", "status": "FORNECEDOR"}, "06913480": {"nome": "DIMENSIONAL BRASIL SOLUCOES", "status": "FORNECEDOR"}, "07036421": {"nome": "BFL INDUSTRIA E COMERCIO DE CEREAIS", "status": "FORNECEDOR"}, "07175849": {"nome": "HANNA INSTRUMENTS BRASIL IMPORTACAO E", "status": "FORNECEDOR"}, "07198208": {"nome": "INGATUBOS - COMERCIO DE IMPERMEABILIZANTES E HIDRAULICA", "status": "FORNECEDOR"}, "07358761": {"nome": "GERDAU", "status": "FORNECEDOR"}, "07670089": {"nome": "USIMAT DESTILARIA DE ALCOOL", "status": "FORNECEDOR"}, "07971293": {"nome": "SHOPPLAB PRODUTOS PARA LAB", "status": "FORNECEDOR"}, "08726888": {"nome": "YORGOS AMBIENTAL", "status": "FORNECEDOR"}, "08736011": {"nome": "GRAN COFFE", "status": "FORNECEDOR"}, "08873626": {"nome": "DA SERRA - RGS", "status": "FORNECEDOR"}, "10308014": {"nome": "PLANLUB LUBRIFICACAO INDUSTRIAL LTD", "status": "FORNECEDOR"}, "10308155": {"nome": "SOLAFT FILTRATION", "status": "FORNECEDOR"}, "10641889": {"nome": "ECO - OLEO COMERCIO DE OLEOS VEGETAIS", "status": "FORNECEDOR"}, "10763189": {"nome": "CORTECK PECAS E FERRAMENTAS LTDA", "status": "FORNECEDOR"}, "10928266": {"nome": "PID BRASIL AUTOMACAO INDUSTRIAL", "status": "FORNECEDOR"}, "13048607": {"nome": "ACOFERRO COMERCIO DE FERRO E ACO", "status": "FORNECEDOR"}, "14784926": {"nome": "NORMA DIN PRODUTOS INDUSTRIAIS", "status": "FORNECEDOR"}, "15205765": {"nome": "INDUSTRIA DE RACOES PASSO DAS TROPAS", "status": "FORNECEDOR"}, "15659754": {"nome": "CGM DISTRIBUIDORA DE ACESSORIOS E", "status": "FORNECEDOR"}, "17610120": {"nome": "MD NORTE COMERCIO DE CEREAIS", "status": "FORNECEDOR"}, "17852946": {"nome": "MASTER CALIBRACOES DE EQUIPAMENTOS DE", "status": "FORNECEDOR"}, "18126327": {"nome": "STANQUETEC ACESSORIOS INDUSTRIAIS", "status": "FORNECEDOR"}, "19235134": {"nome": "LABOROIL", "status": "FORNECEDOR"}, "19583510": {"nome": "INOVED SOLUCOES INDUSTRIAIS", "status": "FORNECEDOR"}, "19777075": {"nome": "INDUSTRIA - VACCARO", "status": "FORNECEDOR"}, "20015164": {"nome": "WINDTEC EQUIP", "status": "FORNECEDOR"}, "20113000": {"nome": "DINAMICA VEDACOES INDUSTRIAIS", "status": "FORNECEDOR"}, "20283842": {"nome": "ITT BRASIL", "status": "FORNECEDOR"}, "21294708": {"nome": "CJ INTERNATIONAL BRASIL COMERCIAL AGRICOLA", "status": "FORNECEDOR"}, "21744642": {"nome": "ALIANCA MIX FERRAMENTAS, SOLDAS E PROTECAO", "status": "FORNECEDOR"}, "21998472": {"nome": "AQUAMEC INDUSTRIA E COMERCIO DE", "status": "FORNECEDOR"}, "22066791": {"nome": "FUGA RENDERING NOVA", "status": "FORNECEDOR"}, "22633336": {"nome": "VIDRAK VISORES DE VIDROS INDUSTRIAIS", "status": "FORNECEDOR"}, "24542953": {"nome": "DUAL DUARTE", "status": "FORNECEDOR"}, "25599044": {"nome": "STEAM MASTER EQUIPAMENTOS TERMICOS", "status": "FORNECEDOR"}, "26854800": {"nome": "FIELDS AUTOMACAO INDUSTRIAL", "status": "FORNECEDOR"}, "28234708": {"nome": "VEOLIA TECNOLOGIAS E SOLUCOES PARA", "status": "FORNECEDOR"}, "29321094": {"nome": "NOVA SMAR", "status": "FORNECEDOR"}, "30011702": {"nome": "MARCHI E GONCALVES", "status": "FORNECEDOR"}, "30937909": {"nome": "BIOPAR", "status": "FORNECEDOR"}, "30955012": {"nome": "LC CARTOES", "status": "FORNECEDOR"}, "34075604": {"nome": "METAL", "status": "FORNECEDOR"}, "34260056": {"nome": "MAURE TORRES DE RESFRIAMENTO", "status": "FORNECEDOR"}, "34355011": {"nome": "POTENZE INDUSTRIA E COMERCIO DE ILUMINACAO", "status": "FORNECEDOR"}, "35030372": {"nome": "LEVO ALIMENTOS", "status": "FORNECEDOR"}, "35768720": {"nome": "PAMPEANO", "status": "FORNECEDOR"}, "36458091": {"nome": "RS SEAL COMERCIO DE VEDACOES", "status": "FORNECEDOR"}, "37852952": {"nome": "GG GRANEL", "status": "FORNECEDOR"}, "37923684": {"nome": "HIPERLAB PRODUTOS E EQUIPAMENTOS PARA", "status": "FORNECEDOR"}, "38461704": {"nome": "Ga Transportes e Locações Negrini", "status": "FORNECEDOR"}, "39759803": {"nome": "FERRAMENTAS MIX MAQUINAS E PROTECAO", "status": "FORNECEDOR"}, "40037134": {"nome": "ROMA TORRES DE RESFRIAMENTO DE AGUA", "status": "FORNECEDOR"}, "43084466": {"nome": "WEISHAUPT DO BRASIL IND E COM", "status": "FORNECEDOR"}, "43213776": {"nome": "EMERSON PROCESS MANAGEMENT", "status": "FORNECEDOR"}, "45036670": {"nome": "CHEMLUB PRODUTOS QUIMICOS", "status": "FORNECEDOR"}, "49378516": {"nome": "ANDRADE MAQUINAS", "status": "FORNECEDOR"}, "50290329": {"nome": "CARGILL NOVOS HORIZONTES", "status": "FORNECEDOR"}, "50392117": {"nome": "CONSISTEC CONTROLES E SIS DE AUT", "status": "FORNECEDOR"}, "50632017": {"nome": "ALFA INSTRUMENTOS ELETRONICOS", "status": "FORNECEDOR"}, "50937564": {"nome": "CORREIAS MERCURIO SA INDUSTRIA E", "status": "FORNECEDOR"}, "50981018": {"nome": "SEWEURODRIVE BRASIL", "status": "FORNECEDOR"}, "51051811": {"nome": "LUITEX MAQUINAS E FERRAMENTAS", "status": "FORNECEDOR"}, "53761607": {"nome": "YOKOGAWA AMERICA DO SUL", "status": "FORNECEDOR"}, "55955793": {"nome": "DURAO COM DE ROLAMENTOS", "status": "FORNECEDOR"}, "56075146": {"nome": "BORMAX CORREIAS E MANGUEIRAS", "status": "FORNECEDOR"}, "61128500": {"nome": "WIKA DO BRASIL INDUSTRIA E COMERCIO", "status": "FORNECEDOR"}, "61193074": {"nome": "SPIRAXSARCO INDUSTRIA E COMERCIO", "status": "FORNECEDOR"}, "61381240": {"nome": "FABRICADORA DE BOMBAS INDUSTRIA E", "status": "FORNECEDOR"}, "61478897": {"nome": "ABECOM ROLAMENTOS E PRODUTOS DE", "status": "FORNECEDOR"}, "62152335": {"nome": "RICHARD KLINGER INDUSTRIA E COMERCIO", "status": "FORNECEDOR"}, "62422654": {"nome": "VEDANTES E ISOLANTES LIDER", "status": "FORNECEDOR"}, "64815327": {"nome": "PETRA MAGO INDUSTRIA E COM DE FIL", "status": "FORNECEDOR"}, "65555146": {"nome": "BALASKA EQUIPE INDUSTRIA E COMERCIO", "status": "FORNECEDOR"}, "65838344": {"nome": "ALPAX COMERCIO DE PRODUTOS PARA", "status": "FORNECEDOR"}, "72096100": {"nome": "MICROMAZZA INDUSTRIA DE VALVULAS", "status": "FORNECEDOR"}, "72202773": {"nome": "NIEHUES", "status": "FORNECEDOR"}, "72357171": {"nome": "AIRTEC AUTOMACAO INDL", "status": "FORNECEDOR"}, "73483661": {"nome": "ISOAR AUTOMACAO INDUSTRIAL", "status": "FORNECEDOR"}, "73709958": {"nome": "AMBIENTALY", "status": "FORNECEDOR"}, "75086785": {"nome": "NILKO TECNOLOGIA", "status": "FORNECEDOR"}, "75633560": {"nome": "CATALINI", "status": "FORNECEDOR"}, "76093731": {"nome": "COPACOL", "status": "FORNECEDOR"}, "76589308": {"nome": "SENSORVILLE ELETRO ELETRONICA E", "status": "FORNECEDOR"}, "77294254": {"nome": "AMAGGI PASSO FUNDO", "status": "FORNECEDOR"}, "77595395": {"nome": "FRIMESA COOPERATIVA", "status": "FORNECEDOR"}, "77752293": {"nome": "LAR COOPERATIVA", "status": "FORNECEDOR"}, "77890846": {"nome": "COOPERATIVA AGRARIA AGROINDUSTRIAL", "status": "FORNECEDOR"}, "81584278": {"nome": "COOPERATIVA AGROINDUSTRIAL", "status": "FORNECEDOR"}, "82674565": {"nome": "MARRARI AUTOMACAO INDUSTRIAL", "status": "FORNECEDOR"}, "82749987": {"nome": "NETZSCH DO BRASIL INDUSTRIA E", "status": "FORNECEDOR"}, "83748772": {"nome": "HENNINGS VEDACOES HIDRAULICAS", "status": "FORNECEDOR"}, "84046101": {"nome": "BUNGE ALIMENTOS S", "status": "FORNECEDOR"}, "85070068": {"nome": "GONCALVES E TORTOLA", "status": "FORNECEDOR"}, "85783272": {"nome": "H BREMER & FILHOS", "status": "FORNECEDOR"}, "87548020": {"nome": "BIANCHINI SA IND COM E", "status": "FORNECEDOR"}, "88094701": {"nome": "COTRICAMPO", "status": "FORNECEDOR"}, "88728027": {"nome": "FRIGORIFICO SILVA INDUSTRIA", "status": "FORNECEDOR"}, "89263669": {"nome": "VALTEC COMERCIO E INDUSTRIA DE ACESSORIOS INDUSTRIAIS", "status": "FORNECEDOR"}, "89519706": {"nome": "RUD CORRENTES INDUSTRIAIS", "status": "FORNECEDOR"}, "90657289": {"nome": "COTRIBA", "status": "FORNECEDOR"}, "90690538": {"nome": "COOFIUME", "status": "FORNECEDOR"}, "91302349": {"nome": "FUGA COUROS S/A", "status": "FORNECEDOR"}, "91830836": {"nome": "OLFAR S/A - ALIMENTO E ENERGIA", "status": "FORNECEDOR"}, "92253095": {"nome": "SAUR EQUIPAMENTOS S/A", "status": "FORNECEDOR"}, "92505833": {"nome": "CROVAL CONEXOES REG E VALVULAS", "status": "FORNECEDOR"}, "92965524": {"nome": "MAQUIMOTOR COMERCIAL E TECNICA", "status": "FORNECEDOR"}, "93085777": {"nome": "RODEX EQUIPAMENTOS INDUSTRIAIS", "status": "FORNECEDOR"}, "93244861": {"nome": "LANGE TERMOPLASTICOS", "status": "FORNECEDOR"}, "94813102": {"nome": "TRES TENTOS VERA", "status": "FORNECEDOR"}, "97381099": {"nome": "CEREALISTA CADORE", "status": "FORNECEDOR"}, "98248644": {"nome": "CAMERA AGROALIMENTOS S", "status": "FORNECEDOR"}};
+const FL = {"07322382": {"nome": "BE8 PF/MARIALVA", "status": "FILIAL_BE8"}, "08684263": {"nome": "BE8 NOVA MARILANDIA", "status": "FILIAL_BE8"}, "33931174": {"nome": "BE8 FLORIANO", "status": "FILIAL_BE8"}, "63228664": {"nome": "BE8 ALTO ARAGUAIA", "status": "FILIAL_BE8"}, "10629776": {"nome": "ZIEHLABEGG DO BRASIL IMPORTACAO", "status": "IMPOR/EXPOR"}, "56073055": {"nome": "Armstrong International do Brasil", "status": "IMPOR/EXPOR"}, "00012377": {"nome": "CEREAL RIO", "status": "FORNECEDOR"}, "00352294": {"nome": "INFRAERO", "status": "FORNECEDOR"}, "00398022": {"nome": "PRO ANALISE QUIMICA E DIAGNOSTICA", "status": "FORNECEDOR"}, "00536772": {"nome": "ECOLAB QUIMICA", "status": "FORNECEDOR"}, "00709920": {"nome": "TITO COMERCIO DE BOMBAS E ACESSORIOS", "status": "FORNECEDOR"}, "00919038": {"nome": "TECALL EQUIPAMENTOS INDUSTRIAIS", "status": "FORNECEDOR"}, "00993264": {"nome": "INTEGRADA", "status": "FORNECEDOR"}, "01041688": {"nome": "FLEXASEAL DO BRASIL", "status": "FORNECEDOR"}, "01315352": {"nome": "VALDIR GEREMIA IND E COM", "status": "FORNECEDOR"}, "01636140": {"nome": "EXPERT INDUSTRIAL E COM IMP AGE E REP", "status": "FORNECEDOR"}, "01682147": {"nome": "AVENORTE AVICOLA CIANORTE", "status": "FORNECEDOR"}, "02095850": {"nome": "GEA EQUIPAMENTOS E SOLUCOES", "status": "FORNECEDOR"}, "02227556": {"nome": "ROMAQ  COMERCIAL QUIMICA", "status": "FORNECEDOR"}, "02745845": {"nome": "INSTRUFARMA INSTRUMENTOS", "status": "FORNECEDOR"}, "02916265": {"nome": "JBS S", "status": "FORNECEDOR"}, "02987873": {"nome": "BOCCHI IND COM DE CEREAIS", "status": "FORNECEDOR"}, "02999886": {"nome": "CALLEGARO", "status": "FORNECEDOR"}, "03509766": {"nome": "TECSUL EQUIPAMENTOS E SERVICOS", "status": "FORNECEDOR"}, "03620220": {"nome": "GRATT INDUSTRIA DE MAQUINAS", "status": "FORNECEDOR"}, "03674465": {"nome": "AZ ARMATUREN DO BRASIL", "status": "FORNECEDOR"}, "04523508": {"nome": "VEGA BRASIL INDUSTRIA E COMERCIO", "status": "FORNECEDOR"}, "04805268": {"nome": "ACIPLAS COMERCIO DE EQUIPAMENTOS INDUSTRIAIS", "status": "FORNECEDOR"}, "04937518": {"nome": "MM COMERCIAL", "status": "FORNECEDOR"}, "05047273": {"nome": "ELETRONOR DISTRIB DE MAT ELETRICOS", "status": "FORNECEDOR"}, "05792912": {"nome": "ACC COMERCIO DE EQUIPAMENTOS INDUSTRIAIS", "status": "FORNECEDOR"}, "05965594": {"nome": "ACOPUMPS  ACOPLAMENTOS E BOMBAS", "status": "FORNECEDOR"}, "06023566": {"nome": "CRM PRODUTOS E SERVICOS INDUSTRIAIS", "status": "FORNECEDOR"}, "06159809": {"nome": "CELENA PASSO FUNDO", "status": "FORNECEDOR"}, "06315338": {"nome": "COFCO PASSO FUNDO", "status": "FORNECEDOR"}, "06347921": {"nome": "POLIPAS", "status": "FORNECEDOR"}, "06353241": {"nome": "SOMAVE AGROINDUSTRIAL", "status": "FORNECEDOR"}, "06913480": {"nome": "DIMENSIONAL BRASIL SOLUCOES", "status": "FORNECEDOR"}, "07036421": {"nome": "BFL INDUSTRIA E COMERCIO DE CEREAIS", "status": "FORNECEDOR"}, "07175849": {"nome": "HANNA INSTRUMENTS BRASIL IMPORTACAO E", "status": "FORNECEDOR"}, "07198208": {"nome": "INGATUBOS - COMERCIO DE IMPERMEABILIZANTES E HIDRAULICA", "status": "FORNECEDOR"}, "07358761": {"nome": "GERDAU", "status": "FORNECEDOR"}, "07670089": {"nome": "USIMAT DESTILARIA DE ALCOOL", "status": "FORNECEDOR"}, "07971293": {"nome": "SHOPPLAB PRODUTOS PARA LAB", "status": "FORNECEDOR"}, "08726888": {"nome": "YORGOS AMBIENTAL", "status": "FORNECEDOR"}, "08736011": {"nome": "GRAN COFFE", "status": "FORNECEDOR"}, "08873626": {"nome": "DA SERRA - RGS", "status": "FORNECEDOR"}, "10308014": {"nome": "PLANLUB LUBRIFICACAO INDUSTRIAL LTD", "status": "FORNECEDOR"}, "10308155": {"nome": "SOLAFT FILTRATION", "status": "FORNECEDOR"}, "10641889": {"nome": "ECO - OLEO COMERCIO DE OLEOS VEGETAIS", "status": "FORNECEDOR"}, "10763189": {"nome": "CORTECK PECAS E FERRAMENTAS LTDA", "status": "FORNECEDOR"}, "10928266": {"nome": "PID BRASIL AUTOMACAO INDUSTRIAL", "status": "FORNECEDOR"}, "13048607": {"nome": "ACOFERRO COMERCIO DE FERRO E ACO", "status": "FORNECEDOR"}, "14784926": {"nome": "NORMA DIN PRODUTOS INDUSTRIAIS", "status": "FORNECEDOR"}, "15205765": {"nome": "INDUSTRIA DE RACOES PASSO DAS TROPAS", "status": "FORNECEDOR"}, "15659754": {"nome": "CGM DISTRIBUIDORA DE ACESSORIOS E", "status": "FORNECEDOR"}, "17610120": {"nome": "MD NORTE COMERCIO DE CEREAIS", "status": "FORNECEDOR"}, "17852946": {"nome": "MASTER CALIBRACOES DE EQUIPAMENTOS DE", "status": "FORNECEDOR"}, "18126327": {"nome": "STANQUETEC ACESSORIOS INDUSTRIAIS", "status": "FORNECEDOR"}, "19235134": {"nome": "LABOROIL", "status": "FORNECEDOR"}, "19583510": {"nome": "INOVED SOLUCOES INDUSTRIAIS", "status": "FORNECEDOR"}, "19777075": {"nome": "INDUSTRIA - VACCARO", "status": "FORNECEDOR"}, "20015164": {"nome": "WINDTEC EQUIP", "status": "FORNECEDOR"}, "20113000": {"nome": "DINAMICA VEDACOES INDUSTRIAIS", "status": "FORNECEDOR"}, "20283842": {"nome": "ITT BRASIL", "status": "FORNECEDOR"}, "21294708": {"nome": "CJ INTERNATIONAL BRASIL COMERCIAL AGRICOLA", "status": "FORNECEDOR"}, "21744642": {"nome": "ALIANCA MIX FERRAMENTAS, SOLDAS E PROTECAO", "status": "FORNECEDOR"}, "21998472": {"nome": "AQUAMEC INDUSTRIA E COMERCIO DE", "status": "FORNECEDOR"}, "22066791": {"nome": "FUGA RENDERING NOVA", "status": "FORNECEDOR"}, "22633336": {"nome": "VIDRAK VISORES DE VIDROS INDUSTRIAIS", "status": "FORNECEDOR"}, "24542953": {"nome": "DUAL DUARTE", "status": "FORNECEDOR"}, "25599044": {"nome": "STEAM MASTER EQUIPAMENTOS TERMICOS", "status": "FORNECEDOR"}, "26854800": {"nome": "FIELDS AUTOMACAO INDUSTRIAL", "status": "FORNECEDOR"}, "28234708": {"nome": "VEOLIA TECNOLOGIAS E SOLUCOES PARA", "status": "FORNECEDOR"}, "29321094": {"nome": "NOVA SMAR", "status": "FORNECEDOR"}, "30011702": {"nome": "MARCHI E GONCALVES", "status": "FORNECEDOR"}, "30937909": {"nome": "BIOPAR", "status": "FORNECEDOR"}, "30955012": {"nome": "LC CARTOES", "status": "FORNECEDOR"}, "34075604": {"nome": "METAL", "status": "FORNECEDOR"}, "34260056": {"nome": "MAURE TORRES DE RESFRIAMENTO", "status": "FORNECEDOR"}, "34355011": {"nome": "POTENZE INDUSTRIA E COMERCIO DE ILUMINACAO", "status": "FORNECEDOR"}, "35030372": {"nome": "LEVO ALIMENTOS", "status": "FORNECEDOR"}, "35768720": {"nome": "PAMPEANO", "status": "FORNECEDOR"}, "36458091": {"nome": "RS SEAL COMERCIO DE VEDACOES", "status": "FORNECEDOR"}, "37852952": {"nome": "GG GRANEL", "status": "FORNECEDOR"}, "37923684": {"nome": "HIPERLAB PRODUTOS E EQUIPAMENTOS PARA", "status": "FORNECEDOR"}, "38461704": {"nome": "Ga Transportes e Locações Negrini", "status": "FORNECEDOR"}, "39759803": {"nome": "FERRAMENTAS MIX MAQUINAS E PROTECAO", "status": "FORNECEDOR"}, "40037134": {"nome": "ROMA TORRES DE RESFRIAMENTO DE AGUA", "status": "FORNECEDOR"}, "43084466": {"nome": "WEISHAUPT DO BRASIL IND E COM", "status": "FORNECEDOR"}, "43213776": {"nome": "EMERSON PROCESS MANAGEMENT", "status": "FORNECEDOR"}, "45036670": {"nome": "CHEMLUB PRODUTOS QUIMICOS", "status": "FORNECEDOR"}, "49378516": {"nome": "ANDRADE MAQUINAS", "status": "FORNECEDOR"}, "50290329": {"nome": "CARGILL NOVOS HORIZONTES", "status": "FORNECEDOR"}, "50392117": {"nome": "CONSISTEC CONTROLES E SIS DE AUT", "status": "FORNECEDOR"}, "50632017": {"nome": "ALFA INSTRUMENTOS ELETRONICOS", "status": "FORNECEDOR"}, "50937564": {"nome": "CORREIAS MERCURIO SA INDUSTRIA E", "status": "FORNECEDOR"}, "50981018": {"nome": "SEWEURODRIVE BRASIL", "status": "FORNECEDOR"}, "51051811": {"nome": "LUITEX MAQUINAS E FERRAMENTAS", "status": "FORNECEDOR"}, "53761607": {"nome": "YOKOGAWA AMERICA DO SUL", "status": "FORNECEDOR"}, "55955793": {"nome": "DURAO COM DE ROLAMENTOS", "status": "FORNECEDOR"}, "56075146": {"nome": "BORMAX CORREIAS E MANGUEIRAS", "status": "FORNECEDOR"}, "61128500": {"nome": "WIKA DO BRASIL INDUSTRIA E COMERCIO", "status": "FORNECEDOR"}, "61193074": {"nome": "SPIRAXSARCO INDUSTRIA E COMERCIO", "status": "FORNECEDOR"}, "61381240": {"nome": "FABRICADORA DE BOMBAS INDUSTRIA E", "status": "FORNECEDOR"}, "61478897": {"nome": "ABECOM ROLAMENTOS E PRODUTOS DE", "status": "FORNECEDOR"}, "62152335": {"nome": "RICHARD KLINGER INDUSTRIA E COMERCIO", "status": "FORNECEDOR"}, "62422654": {"nome": "VEDANTES E ISOLANTES LIDER", "status": "FORNECEDOR"}, "64815327": {"nome": "PETRA MAGO INDUSTRIA E COM DE FIL", "status": "FORNECEDOR"}, "65555146": {"nome": "BALASKA EQUIPE INDUSTRIA E COMERCIO", "status": "FORNECEDOR"}, "65838344": {"nome": "ALPAX COMERCIO DE PRODUTOS PARA", "status": "FORNECEDOR"}, "72096100": {"nome": "MICROMAZZA INDUSTRIA DE VALVULAS", "status": "FORNECEDOR"}, "72202773": {"nome": "NIEHUES", "status": "FORNECEDOR"}, "72357171": {"nome": "AIRTEC AUTOMACAO INDL", "status": "FORNECEDOR"}, "73483661": {"nome": "ISOAR AUTOMACAO INDUSTRIAL", "status": "FORNECEDOR"}, "73709958": {"nome": "AMBIENTALY", "status": "FORNECEDOR"}, "75086785": {"nome": "NILKO TECNOLOGIA", "status": "FORNECEDOR"}, "75633560": {"nome": "CATALINI", "status": "FORNECEDOR"}, "76093731": {"nome": "COPACOL", "status": "FORNECEDOR"}, "76589308": {"nome": "SENSORVILLE ELETRO ELETRONICA E", "status": "FORNECEDOR"}, "77294254": {"nome": "AMAGGI PASSO FUNDO", "status": "FORNECEDOR"}, "77595395": {"nome": "FRIMESA COOPERATIVA", "status": "FORNECEDOR"}, "77752293": {"nome": "LAR COOPERATIVA", "status": "FORNECEDOR"}, "77890846": {"nome": "COOPERATIVA AGRARIA AGROINDUSTRIAL", "status": "FORNECEDOR"}, "81584278": {"nome": "COOPERATIVA AGROINDUSTRIAL", "status": "FORNECEDOR"}, "82674565": {"nome": "MARRARI AUTOMACAO INDUSTRIAL", "status": "FORNECEDOR"}, "82749987": {"nome": "NETZSCH DO BRASIL INDUSTRIA E", "status": "FORNECEDOR"}, "83748772": {"nome": "HENNINGS VEDACOES HIDRAULICAS", "status": "FORNECEDOR"}, "84046101": {"nome": "BUNGE ALIMENTOS S", "status": "FORNECEDOR"}, "85070068": {"nome": "GONCALVES E TORTOLA", "status": "FORNECEDOR"}, "85783272": {"nome": "H BREMER & FILHOS", "status": "FORNECEDOR"}, "87548020": {"nome": "BIANCHINI SA IND COM E", "status": "FORNECEDOR"}, "88094701": {"nome": "COTRICAMPO", "status": "FORNECEDOR"}, "88728027": {"nome": "FRIGORIFICO SILVA INDUSTRIA", "status": "FORNECEDOR"}, "89263669": {"nome": "VALTEC COMERCIO E INDUSTRIA DE ACESSORIOS INDUSTRIAIS", "status": "FORNECEDOR"}, "89519706": {"nome": "RUD CORRENTES INDUSTRIAIS", "status": "FORNECEDOR"}, "90657289": {"nome": "COTRIBA", "status": "FORNECEDOR"}, "90690538": {"nome": "COOFIUME", "status": "FORNECEDOR"}, "91302349": {"nome": "FUGA COUROS S/A", "status": "FORNECEDOR"}, "91830836": {"nome": "OLFAR S/A - ALIMENTO E ENERGIA", "status": "FORNECEDOR"}, "92253095": {"nome": "SAUR EQUIPAMENTOS S/A", "status": "FORNECEDOR"}, "92505833": {"nome": "CROVAL CONEXOES REG E VALVULAS", "status": "FORNECEDOR"}, "92965524": {"nome": "MAQUIMOTOR COMERCIAL E TECNICA", "status": "FORNECEDOR"}, "93085777": {"nome": "RODEX EQUIPAMENTOS INDUSTRIAIS", "status": "FORNECEDOR"}, "93244861": {"nome": "LANGE TERMOPLASTICOS", "status": "FORNECEDOR"}, "94813102": {"nome": "TRES TENTOS VERA", "status": "FORNECEDOR"}, "97381099": {"nome": "CEREALISTA CADORE", "status": "FORNECEDOR"}, "98248644": {"nome": "CAMERA AGROALIMENTOS S", "status": "FORNECEDOR"}, "08495847": {"nome": "BE8 PASSO FUNDO", "status": "FILIAL_BE8"}, "11284311": {"nome": "BE8 SÃO PAULO", "status": "FILIAL_BE8"}};
 
 // Runtime overrideable copies
 let tLookup = {...TL};
+
+// ── Raízes CNPJ das Filiais Be8 (regra de classificação de operação)
+const BE8_RAIZES = new Set(["07322382","08495847","08684263","11284311","33931174","63228664"]);
+function isFilialBe8(cnpjRaizStr){
+  var r=(cnpjRaizStr||"").replace(/[^0-9]/g,"").slice(0,8).padStart(8,"0");
+  return BE8_RAIZES.has(r);
+}
 let fLookup = {...FL};
 
 /* ══════════════════════════════════════════════
@@ -675,7 +742,7 @@ let page = 1, RPP = 20;
 let sortF = "dhEmi", sortD = "desc";
 let charts = {};
 const COLS = ["#00d084","#00a3ff","#00e5ff","#7effa0","#ffb340","#ff4c6a","#a78bfa","#f59e0b","#34d399","#60a5fa","#f472b6","#fb923c"];
-const OP_C = {COMPRA:"rgba(0,208,132,.75)",VENDA:"rgba(0,163,255,.75)","IMPORTAÇÃO":"rgba(255,179,64,.75)",OUTROS:"rgba(167,139,250,.75)"};
+const OP_C = {VENDA:"rgba(0,208,132,.85)",COMPRA:"rgba(0,163,255,.85)",TRANSFERENCIA:"rgba(255,179,64,.85)",OUTROS:"rgba(167,139,250,.85)"};
 
 /* ══════════════════════════════════════════════
    CNPJ UTILS
@@ -691,19 +758,35 @@ function padTR(cnpj, nome){
   return tLookup[r] ? {nome:tLookup[r], raiz:r, ok:true} : {nome:nome||"Não informado", raiz:r, ok:false};
 }
 function padFO(cnpj, nome){
+  // Lookup apenas para nome — status não é mais usado para classificação
   const m = cnpjRaiz(cnpj);
-  if(fLookup[m]) return {nome:fLookup[m].nome, status:fLookup[m].status, matr:m, ok:true};
-  return {nome:nome||"Não informado", status:"NÃO MAPEADO", matr:m, ok:false};
+  const entry = fLookup[m];
+  return {
+    nome: entry ? entry.nome : (nome||"Não informado"),
+    raiz: m,
+    ok:   !!entry,
+  };
+}
+function getNomeForn(cnpj, nome){
+  // Alias simples
+  return padFO(cnpj, nome).nome;
 }
 
 /* ══════════════════════════════════════════════
    CLASSIFICAÇÃO DE OPERAÇÃO
 ══════════════════════════════════════════════ */
-function classOp(sRem, sTom){
-  const r=(sRem||"").toUpperCase(), t=(sTom||"").toUpperCase();
-  if(r==="FILIAL" && (t==="FORNECEDOR"||t==="IMPOR/EXPOR")) return "VENDA";
-  if(r==="FORNECEDOR" && t==="FILIAL") return "COMPRA";
-  if(r==="IMPOR/EXPOR" && t==="FILIAL") return "IMPORTAÇÃO";
+/* ════ NOVA REGRA DE OPERAÇÃO ════
+   VENDA:        remetente É filial Be8  E  destinatário NÃO é filial Be8
+   COMPRA:       destinatário É filial Be8  E  remetente NÃO é filial Be8
+   TRANSFERENCIA: remetente E destinatário AMBOS são filiais Be8
+   OUTROS:       demais casos
+═══════════════════════════════════════════════════════════ */
+function classOp(cnpjRaizRem, cnpjRaizTom){
+  const remBe8 = isFilialBe8(cnpjRaizRem);
+  const tomBe8 = isFilialBe8(cnpjRaizTom);
+  if(remBe8 && tomBe8)   return "TRANSFERENCIA";
+  if(remBe8 && !tomBe8)  return "VENDA";
+  if(!remBe8 && tomBe8)  return "COMPRA";
   return "OUTROS";
 }
 
@@ -770,7 +853,7 @@ function normalizeCTE(c){
     dest_orig:c.dest_orig || c.destinatario || "",
     cnpjTom:  c.cnpjTom   || c.cnpjDest || "",
     st_tom:   c.st_tom    || c.status_tom || "NAO MAPEADO",
-    tipo_op:  c.tipo_op   || c.tipo_operacao || "OUTROS",
+    tipo_op:  c.tipo_op   || c.tipo_operacao || classOp(c.cnpjRem||c.cnpjForn||"", c.cnpjTom||c.cnpjDest||"") || "OUTROS",
     fil_ori:  c.fil_ori   || c.filial_ori || "",
     fil_dest: c.fil_dest  || c.filial_dest || "",
     prod:     c.prod      || c.mercadoriaTipo || "Nao informado",
@@ -785,7 +868,7 @@ function repad(){
     const tr=padTR(c.tr_raiz||c.cnpjTr, c.tr_orig);
     const rem=padFO(c.cnpjRem, c.fo_orig);
     const tom=padFO(c.cnpjTom, c.dest_orig);
-    const op=classOp(rem.status,tom.status);
+    const op=classOp(c.cnpjRem||c.cnpjForn||"", c.cnpjTom||c.cnpjDest||"");
     return{...c,tr_pad:tr.nome,tr_ok:tr.ok,fo_pad:rem.nome,st_rem:rem.status,st_tom:tom.status,
       tipo_op:op,fil_ori:rem.status==="FILIAL"?rem.nome:"",fil_dest:tom.status==="FILIAL"?tom.nome:""};
   });
@@ -872,7 +955,7 @@ function parseXML(txt){
     }
     const prod=g("proPred")||"Não informado";
     const pct=vMerc>0?vFrete/vMerc*100:0,rkg=peso>0?vFrete/peso:0;
-    const tipo_op=classOp(reI.status,tomI.status);
+    const tipo_op=classOp(cnpjRem, cnpjTom);
     return{
       chaveCte,nCT,dhEmi,mesNum,trimestre,ano:d.getFullYear().toString(),
       munIni,ufIni,munFim,ufFim,rota,
@@ -908,7 +991,7 @@ function loadDemoData(){
     const trI=padTR(tr[1],tr[0]), remI=padFO(fo[0],fo[0]);
     const tomCNPJ=fo[1]==="FILIAL"?"30937909000131":"33931174000100";
     const tomI=padFO(tomCNPJ,"DESTINO");
-    const op=classOp(remI.status,tomI.status);
+    const op=classOp(fo[0], tomCNPJ);
     window.ALL.push({
       chaveCte,nCT:String(1700+i),dhEmi,
       mesNum:mes,trimestre:"T"+Math.ceil((dObj.getMonth()+1)/3)+"/"+dObj.getFullYear(),ano:dObj.getFullYear().toString(),
@@ -951,17 +1034,17 @@ function populateFilters(){
 }
 function gv(id){return document.getElementById(id)?.value||"";}
 function applyFilters(){
-  const mes=gv("f-mes"),tri=gv("f-tri"),op=gv("f-op"),srem=gv("f-srem"),tr=gv("f-tr"),fo=gv("f-fo"),uf=gv("f-uf"),fori=gv("f-fori"),fdest=gv("f-fdest"),prod=gv("f-prod"),ori=gv("f-ori"),dest=gv("f-dest");
+  const mes=gv("f-mes"),tri=gv("f-tri"),op=gv("f-op"),tr=gv("f-tr"),fo=gv("f-fo"),uf=gv("f-uf"),fori=gv("f-fori"),fdest=gv("f-fdest"),prod=gv("f-prod"),ori=gv("f-ori"),dest=gv("f-dest");
   FIL=window.ALL.filter(c=>
     (!mes||c.mesNum===mes)&&(!tri||c.trimestre===tri)&&(!op||c.tipo_op===op)&&
-    (!srem||c.st_rem===srem)&&(!tr||c.tr_pad===tr)&&(!fo||c.fo_pad===fo)&&
+    (!tr||c.tr_pad===tr)&&(!fo||c.fo_pad===fo)&&
     (!uf||c.ufFim===uf)&&(!fori||c.fil_ori===fori)&&(!fdest||c.fil_dest===fdest)&&
     (!prod||c.prod===prod)&&(!ori||c.munIni===ori)&&(!dest||c.munFim===dest)
   );
   renderDash(FIL);
 }
 function clearFilters(){
-  ["f-mes","f-tri","f-op","f-srem","f-tr","f-fo","f-uf","f-fori","f-fdest","f-prod","f-ori","f-dest"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  ["f-mes","f-tri","f-op","f-tr","f-fo","f-uf","f-fori","f-fdest","f-prod","f-ori","f-dest"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
   FIL=[...window.ALL];renderDash(FIL);
 }
 
@@ -1001,7 +1084,7 @@ function renderDash(data){
   document.getElementById("s-ct").textContent=data.length;
   document.getElementById("s-ct-s").textContent=nTr+" transp · "+nFo+" forn";
   // OP PILLS
-  const OC={COMPRA:"--op-C",VENDA:"--op-V","IMPORTAÇÃO":"--op-I",OUTROS:"--op-O"};
+  const OC={VENDA:"--op-C",COMPRA:"--op-V",TRANSFERENCIA:"--op-I",OUTROS:"--op-O"};
   document.getElementById("op-pills").innerHTML=Object.keys(byOp).map(op=>`
     <div class="op-pill" style="border:1px solid var(${OC[op]||"--border"})">
       <span class="dot" style="background:var(${OC[op]||"--text3"})"></span>
@@ -1022,9 +1105,9 @@ function renderDash(data){
     {i:"🏭",l:"Fornecedores",v:nFo,m:"forn"},
     {i:"🏢",l:"Filiais",v:nFil,m:"fil"},
     {i:"📍",l:"Destinos",v:nDest,m:"dest"},
-    {i:"🔀",l:"Compras",v:(byOp["COMPRA"]||[]).length,m:"compra"},
     {i:"💼",l:"Vendas",v:(byOp["VENDA"]||[]).length,m:"venda"},
-    {i:"🌐",l:"Importações",v:(byOp["IMPORTAÇÃO"]||[]).length,m:"import"},
+    {i:"💼",l:"Vendas",v:(byOp["VENDA"]||[]).length,m:"venda"},
+    {i:"🌐",l:"Transferências",v:(byOp["TRANSFERENCIA"]||[]).length,m:"import"},
     {i:"❓",l:"Outros",v:(byOp["OUTROS"]||[]).length,m:"outros"},
   ];
   document.getElementById("kpi-g").innerHTML=kpis.map(k=>`
@@ -1042,7 +1125,7 @@ function renderDash(data){
    CHARTS — Chart.js + DataLabels
 ══════════════════════════════════════════════ */
 Chart.register(ChartDataLabels);
-const DL={display:true,color:"#ffffff",font:{family:"Sora",size:9,weight:"800"},formatter:v=>v>=1000000?(v/1e6).toFixed(1)+"M":v>=1000?(v/1000).toFixed(0)+"k":typeof v==="number"?v.toFixed(v<10?2:0):v,clamp:true};
+const DL={display:true,color:"#ffffff",font:{family:"Sora",size:10,weight:"800"},formatter:v=>v>=1000000?(v/1e6).toFixed(1)+"M":v>=1000?(v/1000).toFixed(0)+"k":typeof v==="number"?v.toFixed(v<10?2:0):v,clamp:true};
 const DLH={...DL,anchor:"end",align:"end"};
 const DL_BAR={...DLH};
 const DL_BAR_P={...DLH,formatter:function(v){if(v>=1e6)return(v/1e6).toFixed(1)+"MT";if(v>=1e3)return(v/1e3).toFixed(1)+"T";return Math.round(v)+"kg";}};
@@ -1053,7 +1136,7 @@ const SCALES_LOG={x:{ticks:{color:"#6098b8",font:{size:9}},grid:{color:"rgba(255
 const SCALES_LOG_H={x:{type:"logarithmic",ticks:{color:"#6098b8",font:{size:9},callback:function(v,i,vals){if(v===0)return"0";if(v>=1e6)return(v/1e6).toFixed(0)+"M";if(v>=1e3)return(v/1e3).toFixed(0)+"k";return v;}},grid:{color:"rgba(255,255,255,.04)"}},y:{ticks:{color:"#ffffff",font:{size:9,weight:"600"}},grid:{color:"rgba(255,255,255,.04)"}}};
 
 function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
-function mkB(id,labs,dsets,opts={}){dc(id);const ctx=document.getElementById(id);if(!ctx)return;charts[id]=new Chart(ctx,{type:"bar",data:{labels:labs,datasets:dsets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#6098b8",font:{size:10},boxWidth:12}},datalabels:{...DLH},...(opts.plugins||{})},scales:SCALES,...opts}});}
+function mkB(id,labs,dsets,opts={}){dc(id);const ctx=document.getElementById(id);if(!ctx)return;charts[id]=new Chart(ctx,{type:"bar",data:{labels:labs,datasets:dsets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#6098b8",font:{size:10},boxWidth:12}},datalabels:{...DLH},...(opts.plugins||{})},scales:opts.useLog?SCALES_LOG:SCALES,...opts}});}
 function mkBH(id,labs,dsets,opts={}){dc(id);const ctx=document.getElementById(id);if(!ctx)return;charts[id]=new Chart(ctx,{type:"bar",data:{labels:labs,datasets:dsets},options:{responsive:true,maintainAspectRatio:false,indexAxis:"y",plugins:{legend:{display:false},datalabels:opts.isPct?DL_PCT:(opts.isPeso?DL_BAR_P:DLH),...(opts.plugins||{})},scales:opts.useLog?SCALES_LOG_H:SCALES_H,...opts}});}
 function mkL(id,labs,dsets,opts={}){dc(id);const ctx=document.getElementById(id);if(!ctx)return;charts[id]=new Chart(ctx,{type:"line",data:{labels:labs,datasets:dsets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#6098b8",font:{size:10},boxWidth:10}},datalabels:{display:false},...(opts.plugins||{})},scales:SCALES,...opts}});}
 function mkD(id,labs,data,cols){dc(id);const ctx=document.getElementById(id);if(!ctx)return;charts[id]=new Chart(ctx,{type:"doughnut",data:{labels:labs,datasets:[{data,backgroundColor:cols,borderColor:"#0a1e2e",borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"right",labels:{color:"#6098b8",font:{size:10},boxWidth:10}},datalabels:{display:true,color:"#fff",font:{size:9,weight:"700"},formatter:(v,c)=>{const t=c.dataset.data.reduce((a,b)=>a+b,0);return t>0?(v/t*100).toFixed(2)+"%":""}}}}});}
@@ -1070,7 +1153,7 @@ function renderCharts(data){
   const mL=mK.map(m=>{const[y,mo]=m.split("-");return["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"][+mo-1]+"/"+y.slice(2);});
   const topN=(obj,n,fn)=>Object.entries(obj).sort((a,b)=>fn(b[1])-fn(a[1])).slice(0,n);
   const trT=topN(byTr,10,fS),foT=topN(byFo,10,fS),rotaT=topN(byRota,10,fS);
-  const ops=["COMPRA","VENDA","IMPORTAÇÃO","OUTROS"];
+  const ops=["VENDA","COMPRA","TRANSFERENCIA","OUTROS"];
 
   // Visão Geral
   const pctV=mK.map(m=>pA(byM[m])),avgP=pctV.reduce((a,b)=>a+b,0)/Math.max(pctV.length,1);
@@ -1087,10 +1170,10 @@ function renderCharts(data){
 
   // Operação
   const opD=ops.map(o=>(byOp[o]||[]));
-  mkB("c-op-fr",ops,[{label:"Frete",data:opD.map(fS),backgroundColor:ops.map(o=>OP_C[o]),borderRadius:6}],{plugins:{legend:{display:false},datalabels:{display:true,color:"#ffffff",font:{size:10,weight:"800"},formatter:v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'k':v.toFixed(0),anchor:"end",align:"end",clamp:true}}});
+  mkB("c-op-fr",ops,[{label:"Frete",data:opD.map(fS),backgroundColor:ops.map(o=>OP_C[o]),borderRadius:6}],{useLog:false},{plugins:{legend:{display:false},datalabels:{display:true,color:"#ffffff",font:{size:10,weight:"800"},formatter:v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'k':v.toFixed(0),anchor:"end",align:"end",clamp:true}}});
   mkB("c-op-ct",ops,[{label:"CT-es",data:opD.map(a=>a.length),backgroundColor:ops.map(o=>OP_C[o]),borderRadius:6}],{plugins:{legend:{display:false},datalabels:{display:true,color:"#ffffff",font:{size:10,weight:"800"},formatter:v=>String(v),anchor:"end",align:"end",clamp:true}}});
   mkB("c-op-pe",ops,[{label:"Peso",data:opD.map(pS),backgroundColor:ops.map(o=>OP_C[o]),borderRadius:6}],{plugins:{legend:{display:false},datalabels:{display:true,color:"#ffffff",font:{size:10,weight:"800"},formatter:v=>v>=1e6?(v/1e6).toFixed(1)+'MT':v>=1e3?(v/1e3).toFixed(1)+'T':Math.round(v)+'kg',anchor:"end",align:"end",clamp:true}}});
-  mkB("c-op-pc",ops,[{label:"% Frete",data:opD.map(pA),backgroundColor:ops.map(o=>OP_C[o]),borderRadius:6}],{plugins:{legend:{display:false}}});
+  mkB("c-op-pc",ops,[{label:"% Frete",data:opD.map(pA),backgroundColor:ops.map(o=>OP_C[o]),borderRadius:6}],{plugins:{legend:{display:false},datalabels:{display:true,color:"#ffffff",font:{size:11,weight:"800"},formatter:function(v){return (v||0).toFixed(2)+"%";},anchor:"end",align:"end",clamp:true}}});
   mkB("c-op-rk",ops,[{label:"R$/kg",data:opD.map(rA),backgroundColor:ops.map(o=>OP_C[o]),borderRadius:6}],{plugins:{legend:{display:false},datalabels:{display:true,color:"#ffffff",font:{size:10,weight:"800"},formatter:v=>v.toFixed(4),anchor:"end",align:"end",clamp:true}}});
   mkL("c-op-me",mL,ops.map((op,i)=>({label:op,data:mK.map(m=>(byOp[op]||[]).filter(c=>c.mesNum===m).reduce((s,c)=>s+c.vFrete,0)),borderColor:COLS[i],backgroundColor:COLS[i]+"30",tension:.4,fill:false,pointRadius:3})));
 
@@ -1103,7 +1186,7 @@ function renderCharts(data){
   mkB("c-tr-cv",trT.slice(0,8).map(([k])=>k.length>14?k.slice(0,12)+"…":k),[
     {label:"COMPRA",data:trT.slice(0,8).map(([,v])=>fS(v.filter(c=>c.tipo_op==="COMPRA"))),backgroundColor:"rgba(0,208,132,.75)",borderRadius:4},
     {label:"VENDA",data:trT.slice(0,8).map(([,v])=>fS(v.filter(c=>c.tipo_op==="VENDA"))),backgroundColor:"rgba(0,163,255,.75)",borderRadius:4},
-    {label:"IMPORTAÇÃO",data:trT.slice(0,8).map(([,v])=>fS(v.filter(c=>c.tipo_op==="IMPORTAÇÃO"))),backgroundColor:"rgba(255,179,64,.75)",borderRadius:4},
+    {label:"TRANSFERENCIA",data:trT.slice(0,8).map(([,v])=>fS(v.filter(c=>c.tipo_op==="TRANSFERENCIA"))),backgroundColor:"rgba(255,179,64,.75)",borderRadius:4},
   ]);
 
   // Fornecedores
@@ -1173,7 +1256,7 @@ function renderInsights(data){
     mkI("💸","Frete Alto / Peso Baixo",rkgAlto.length+" CT-es","R$/kg > "+avgRkg.toFixed(4)+" (2× média). Possível ineficiência.",rkgAlto.length>0?"al":"ok","rkg_alto",rkgAlto),
     mkI("🎯","Concentração Transportadora",trTopConc.toFixed(1)+"% do frete",(trRank[0]||"–")+" concentra "+trTopConc.toFixed(1)+"% do custo total. "+(trTopConc>60?"⚠️ Alta dependência!":"✓ Diversificação saudável."),trTopConc>60?"wa":"ok","conc"),
     tend?mkI("📈","Tendência "+tend.ult,tend.dir+" "+(tend.pct||0).toFixed(1)+"% vs "+tend.pen,"Frete "+(tend.dir==="↑"?"subiu":"caiu")+" R$ "+fmtB(Math.abs(tend.vU-tend.vP))+" em relação ao mês anterior.",tend.dir==="↑"?"wa":"ok","tend"):mkI("📅","Série Histórica","1 período","Adicione mais CT-es para ver tendências.","in","hist"),
-    mkI("🌐","CT-es de Importação",(byOp["IMPORTAÇÃO"]||[]).length+" registros","Frete importação: R$ "+fmtB(fS(byOp["IMPORTAÇÃO"]||[]))+". % frete: "+pA(byOp["IMPORTAÇÃO"]||[]).toFixed(2)+"%.",(byOp["IMPORTAÇÃO"]||[]).length>0?"in":"ok","import",byOp["IMPORTAÇÃO"]||[]),
+    mkI("🌐","CT-es Transferência",(byOp["TRANSFERENCIA"]||[]).length+" registros","Frete importação: R$ "+fmtB(fS(byOp["TRANSFERENCIA"]||[]))+". % frete: "+pA(byOp["TRANSFERENCIA"]||[]).toFixed(2)+"%.",(byOp["TRANSFERENCIA"]||[]).length>0?"in":"ok","import",byOp["TRANSFERENCIA"]||[]),
   ].filter(Boolean);
   const sec3=mK.slice(-3).reverse().map(m=>{
     const items=byMes[m],prev=mK[mK.indexOf(m)-1];
@@ -1182,8 +1265,8 @@ function renderInsights(data){
     return mkI("📅","Análise "+m,"R$ "+fmtB(vA)+" · "+items.length+" CT-es","% Frete: "+pA(items).toFixed(2)+"% · R$/kg: "+rA(items).toFixed(4)+(diff!==null?" · vs anterior: "+(diff>=0?"+":"")+diff.toFixed(2)+"%":""),diff!==null&&diff>10?"wa":diff!==null&&diff<-10?"ok":"in","mes_"+m,items);
   });
   const sec4=[
-    mkI("⚖️","Compra vs Venda · Frete","C: R$ "+fmtB(fS(byOp["COMPRA"]||[]))+" · V: R$ "+fmtB(fS(byOp["VENDA"]||[])),"Comparativo entre operações de compra e venda.","in","cv_fr"),
-    mkI("📦","% Frete Compra vs Venda","C: "+pA(byOp["COMPRA"]||[]).toFixed(2)+"% · V: "+pA(byOp["VENDA"]||[]).toFixed(2)+"%","Eficiência de frete por tipo de operação.","in","cv_pct"),
+    mkI("⚖️","Venda vs Compra · Frete","V: R$ "+fmtB(fS(byOp["VENDA"]||[]))+" · C: R$ "+fmtB(fS(byOp["COMPRA"]||[]))+" · T: R$ "+fmtB(fS(byOp["TRANSFERENCIA"]||[])),"Comparativo entre operações de compra e venda.","in","cv_fr"),
+    mkI("📦","% Frete Venda vs Compra","C: "+pA(byOp["COMPRA"]||[]).toFixed(2)+"% · V: "+pA(byOp["VENDA"]||[]).toFixed(2)+"%","Eficiência de frete por tipo de operação.","in","cv_pct"),
     mkI("🗺️","Rota Mais Cara",()=>{const r=gb(data,"rota");const top=Object.keys(r).sort((a,b)=>fS(r[b])-fS(r[a]))[0]||"–";return"R$ "+fmtB(fS(r[top]||[]));},()=>{const r=gb(data,"rota");const top=Object.keys(r).sort((a,b)=>fS(r[b])-fS(r[a]))[0]||"–";return"Rota: "+top.slice(0,40);},"wa","rota_top"),
     mkI("🏢","Filial Maior Volume",()=>{const fi=gb(data.filter(c=>c.fil_ori),"fil_ori");const top=Object.keys(fi).sort((a,b)=>fS(fi[b])-fS(fi[a]))[0]||"N/A";return"R$ "+fmtB(fS(fi[top]||[]));},"Filial origem com maior custo no período.","in","fil_top"),
   ].map(i=>({...i,val:typeof i.val==="function"?i.val():i.val,desc:typeof i.desc==="function"?i.desc():i.desc}));
@@ -1213,7 +1296,7 @@ function openInsD(key){
   else if(key==="peso_baixo"){const avgP=data.reduce((s,c)=>s+c.peso,0)/data.length;items=data.filter(c=>c.peso<avgP*0.5&&c.peso>0);title="📉 Peso Muito Baixo";extra=`<div class="al-box">Médio: ${fmtB(avgP)} kg · Limiar: ${fmtB(avgP*0.5)} kg</div>`;}
   else if(key==="rkg_alto"){const avgP=data.reduce((s,c)=>s+c.peso,0)/data.length;const avgF=fS(data)/data.length;const avgRkg=avgP>0?avgF/avgP:0;items=data.filter(c=>(c.rkg||0)>avgRkg*2&&c.peso>0);title="💸 R$/kg Acima de 2× Média";extra=`<div class="al-box">R$/kg médio: ${avgRkg.toFixed(4)} · Limiar: ${(avgRkg*2).toFixed(4)}</div>`;}
   else if(key==="conc"){const byTr=gb(data,"tr_pad");const top=Object.keys(byTr).sort((a,b)=>fS(byTr[b])-fS(byTr[a]))[0]||"";items=byTr[top]||[];title="🎯 Concentração · "+top;}
-  else if(key==="import"){items=data.filter(c=>c.tipo_op==="IMPORTAÇÃO");title="🌐 CT-es de Importação";}
+  else if(key==="import"){items=data.filter(c=>c.tipo_op==="TRANSFERENCIA");title="🌐 CT-es de Importação";}
   else if(key.startsWith("mes_")){const m=key.replace("mes_","");items=data.filter(c=>c.mesNum===m);title="📅 CT-es do Período · "+m;}
   else{items=data.slice(0,50);title="📋 Amostra de CT-es";}
   if(!items.length){openMo("Sem dados","<p style='color:var(--text2);padding:20px 0'>Nenhum CT-e encontrado.</p>");return;}
@@ -1259,7 +1342,7 @@ function openKPI(type){
     forn:Object.keys(byFo).map(f=>[f,byFo[f].length+" CT-es"]),
     compra:[["CT-es",(byOp["COMPRA"]||[]).length],["Frete","R$ "+fmtB(fS(byOp["COMPRA"]||[]))]],
     venda:[["CT-es",(byOp["VENDA"]||[]).length],["Frete","R$ "+fmtB(fS(byOp["VENDA"]||[]))]],
-    import:[["CT-es",(byOp["IMPORTAÇÃO"]||[]).length],["Frete","R$ "+fmtB(fS(byOp["IMPORTAÇÃO"]||[]))]],
+    import:[["CT-es",(byOp["TRANSFERENCIA"]||[]).length],["Frete","R$ "+fmtB(fS(byOp["TRANSFERENCIA"]||[]))]],
     outros:[["CT-es",(byOp["OUTROS"]||[]).length]],
     dest:Object.entries(gb(d,"munFim")).sort((a,b)=>b[1].length-a[1].length).map(([k,v])=>[k,v.length+" CT-es"]),
     fil:[...new Set(d.map(c=>c.fil_ori||c.fil_dest).filter(Boolean))].map(f=>[f,d.filter(c=>c.fil_ori===f||c.fil_dest===f).length+" CT-es"]),
@@ -1280,7 +1363,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeMo();});
 /* ══════════════════════════════════════════════
    TABLE
 ══════════════════════════════════════════════ */
-function oBK(op){return{COMPRA:"bg",VENDA:"bb",IMPORTAÇÃO:"bw",OUTROS:"bp"}[op]||"bgr";}
+function oBK(op){return{COMPRA:"bg",VENDA:"bb",TRANSFERENCIA:"bw",OUTROS:"bp"}[op]||"bgr";}
 function renderTbl(data){
   const sorted=[...data].sort((a,b)=>{let va=a[sortF]||"",vb=b[sortF]||"";if(typeof va==="number")return sortD==="asc"?va-vb:vb-va;return sortD==="asc"?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));});
   const q=(document.getElementById("tbl-s")?.value||"").toLowerCase();
@@ -1389,7 +1472,7 @@ async function exportPDF(){
   y+=38;
   // Operações
   pdf.setFontSize(9);pdf.setTextColor(...GR);pdf.setFont("helvetica","bold");pdf.text("POR TIPO DE OPERAÇÃO",M,y);y+=7;
-  ["COMPRA","VENDA","IMPORTAÇÃO","OUTROS"].forEach((op,i)=>{const items=byOp[op]||[];const f=fS(items);const cx=M+i*((W-2*M)/4);pdf.setFillColor(17,39,64);pdf.roundedRect(cx,y,(W-2*M)/4-2,14,2,2,"F");pdf.setFontSize(7);pdf.setTextColor(...GY);pdf.text(op,cx+3,y+5);pdf.setFontSize(9);pdf.setTextColor(...WH);pdf.setFont("helvetica","bold");pdf.text(items.length+" · R$ "+fmtB(f),cx+3,y+11);});
+  ["COMPRA","VENDA","TRANSFERENCIA","OUTROS"].forEach((op,i)=>{const items=byOp[op]||[];const f=fS(items);const cx=M+i*((W-2*M)/4);pdf.setFillColor(17,39,64);pdf.roundedRect(cx,y,(W-2*M)/4-2,14,2,2,"F");pdf.setFontSize(7);pdf.setTextColor(...GY);pdf.text(op,cx+3,y+5);pdf.setFontSize(9);pdf.setTextColor(...WH);pdf.setFont("helvetica","bold");pdf.text(items.length+" · R$ "+fmtB(f),cx+3,y+11);});
   y+=22;
   // Ranking
   pdf.setFontSize(9);pdf.setTextColor(...GR);pdf.setFont("helvetica","bold");pdf.text("RANKING TRANSPORTADORAS",M,y);y+=7;
@@ -1441,7 +1524,7 @@ async function exportInsightsPDF(){
     {l:"Ticket Médio CT-e",v:"R$ "+fmt(avgF),al:false,d:"Frete médio por documento"},
     {l:"CT-es Outlier (>2× média)",v:outliers,al:outliers>0,d:"Fretes com custo acima de 2× a média"},
     {l:"Concentração Top Transportadora",v:trTopConc.toFixed(2)+"%",al:trTopConc>60,d:(trTop||"–")+" concentra "+trTopConc.toFixed(1)+"% do custo"},
-    ...["COMPRA","VENDA","IMPORTAÇÃO","OUTROS"].map(op=>({l:"Operação "+op,v:(byOp[op]||[]).length+" CT-es · R$ "+fmtB(fS(byOp[op]||[])),al:false,d:"% Frete: "+pA(byOp[op]||[]).toFixed(2)+"% · R$/kg: "+rA(byOp[op]||[]).toFixed(4)})),
+    ...["COMPRA","VENDA","TRANSFERENCIA","OUTROS"].map(op=>({l:"Operação "+op,v:(byOp[op]||[]).length+" CT-es · R$ "+fmtB(fS(byOp[op]||[])),al:false,d:"% Frete: "+pA(byOp[op]||[]).toFixed(2)+"% · R$/kg: "+rA(byOp[op]||[]).toFixed(4)})),
     ...mK.slice(-3).map(m=>{const prev=mK[mK.indexOf(m)-1];const vA=fS(byMes[m]),vP=prev?fS(byMes[prev]):null;const diff=vP?((vA-vP)/vP*100):null;return{l:"Período "+m,v:"R$ "+fmtB(vA)+" · "+byMes[m].length+" CT-es",al:diff!==null&&diff>10,d:diff!==null?"Var. vs anterior: "+(diff>=0?"+":"")+diff.toFixed(2)+"%":"Primeiro período"};}),
   ];
   pdf.setFontSize(10);pdf.setTextColor(...WN);pdf.setFont("helvetica","bold");pdf.text("PAINEL DE INSIGHTS",M,y);y+=8;
@@ -1651,7 +1734,7 @@ function sortPerf(tableId,colIdx){
 }
 
 /* ════ DEMO TOOLTIP FIX ════ */
-window.DEMO_TOOLTIP="Carrega 63 CT-es simulados com múltiplas transportadoras, fornecedores, filiais e tipos de operação (COMPRA, VENDA, IMPORTAÇÃO) para testar todas as funcionalidades sem precisar de arquivos reais. Os dados cobrem 7 meses com variações realistas de frete e mercadoria.";
+window.DEMO_TOOLTIP="Carrega 63 CT-es simulados com múltiplas transportadoras, fornecedores, filiais e tipos de operação (VENDA, COMPRA, TRANSFERÊNCIA) para testar todas as funcionalidades sem precisar de arquivos reais. Os dados cobrem 7 meses com variações realistas de frete e mercadoria.";
 
 /* ════ EXPOSE GLOBALS ════ */
 window.repad = function(){
@@ -1659,7 +1742,7 @@ window.repad = function(){
     var trI=padTR(c.tr_raiz||c.cnpjTr||c.cnpjTransp||"",c.tr_orig||c.tr_pad||"");
     var remI=padFO(c.cnpjRem||c.cnpjForn||"",c.fo_orig||c.fo_pad||"");
     var tomI=padFO(c.cnpjTom||c.cnpjDest||"",c.dest_orig||"");
-    var op=classOp(remI.status,tomI.status);
+    var op=classOp(c.cnpjRem||c.cnpjForn||"", c.cnpjTom||c.cnpjDest||"");
     var vMerc=c.vMerc||c.vMercadoria||0;
     var vFrete=c.vFrete||0;
     var peso=c.peso||0;
