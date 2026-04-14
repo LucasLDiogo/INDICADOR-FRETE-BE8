@@ -217,6 +217,41 @@ td.tx{font-family:"Sora",sans-serif;font-size:11px}
 .perf-tbl td.wr{color:var(--danger)}
 .pt-hdr{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);margin:18px 0 10px;display:flex;align-items:center;gap:7px}
 .pt-hdr::before{content:"";width:3px;height:11px;background:linear-gradient(to bottom,var(--acc1),var(--acc2));border-radius:2px}
+
+/* ── TABELA PERFORMANCE FIXA ── */
+.perf-section{margin-top:18px}
+.perf-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:7px}
+.perf-section-title::before{content:"";width:3px;height:11px;
+  background:linear-gradient(to bottom,var(--acc1),var(--acc2));border-radius:2px}
+.perf-scroll{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border);
+  max-height:420px;overflow-y:auto}
+.perf-scroll table{width:100%;border-collapse:collapse;font-size:11px}
+.perf-scroll thead{position:sticky;top:0;z-index:10}
+.perf-scroll thead tr{background:var(--bg3)}
+.perf-scroll thead th{padding:10px 13px;text-align:left;font-size:9px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.07em;color:var(--text2);
+  border-bottom:2px solid var(--border);cursor:pointer;white-space:nowrap;user-select:none;
+  background:var(--bg3)}
+.perf-scroll thead th:hover{color:#fff}
+.perf-scroll thead th.asc::after{content:" ↑";color:var(--acc1)}
+.perf-scroll thead th.desc::after{content:" ↓";color:var(--acc1)}
+.perf-scroll tbody tr{border-bottom:1px solid var(--border2);transition:background .15s}
+.perf-scroll tbody tr:last-child{border-bottom:none}
+.perf-scroll tbody tr:hover{background:var(--bg3)}
+.perf-scroll tbody td{padding:9px 13px;color:var(--text1);white-space:nowrap;
+  font-family:"JetBrains Mono",monospace;font-size:11px}
+.perf-scroll tbody td.td-name{font-family:"Sora",sans-serif;font-weight:600;color:#fff;max-width:220px;
+  overflow:hidden;text-overflow:ellipsis}
+.perf-scroll tbody td.td-frete{color:var(--acc1);font-weight:700}
+.perf-scroll tbody td.td-pct-ok{color:var(--acc1)}
+.perf-scroll tbody td.td-pct-warn{color:var(--danger)}
+.perf-scroll tbody td.td-ctes{color:#fff;font-weight:700;text-align:center}
+.perf-scroll tfoot tr{background:var(--bg3);border-top:2px solid var(--border)}
+.perf-scroll tfoot td{padding:9px 13px;font-family:"JetBrains Mono",monospace;font-size:11px;
+  font-weight:700;color:var(--text0)}
+.perf-scroll tfoot td.td-name{font-family:"Sora",sans-serif;color:var(--acc1)}
+
 </style>
 </head>
 <body>
@@ -383,33 +418,34 @@ td.tx{font-family:"Sora",sans-serif;font-size:11px}
       <div id="tab-tr" class="tab-panel">
         <div class="ch2">
           <div class="cc"><div class="ct">RANKING · VALOR FRETE</div><div class="cw t"><canvas id="c-tr-fr"></canvas></div></div>
-          <div class="cc"><div class="ct">RANKING · PESO TOTAL</div><div class="cw t"><canvas id="c-tr-pe"></canvas></div></div>
-        </div>
-        <div class="ch2">
           <div class="cc"><div class="ct">RANKING · R$/kg</div><div class="cw t"><canvas id="c-tr-rk"></canvas></div></div>
-          <div class="cc"><div class="ct">RANKING · % FRETE/MERCADORIA</div><div class="cw t"><canvas id="c-tr-pc"></canvas></div></div>
         </div>
         <div class="ch2">
-          <div class="cc s2"><div class="ct">COMPRA × VENDA × IMPORTAÇÃO POR TRANSPORTADORA</div><div class="cw"><canvas id="c-tr-cv"></canvas></div></div>
+          <div class="cc"><div class="ct">RANKING · % FRETE/MERCADORIA</div><div class="cw t"><canvas id="c-tr-pc"></canvas></div></div>
+          <div class="cc s2"><div class="ct">COMPRA × VENDA × IMPORTAÇÃO</div><div class="cw"><canvas id="c-tr-cv"></canvas></div></div>
         </div>
-      </div>
-
-      
-        <div class="pt-hdr">📋 Performance por Transportadora (todas)</div>
-        <div class="perf-wrap">
-          <table class="perf-tbl" id="pt-tr">
-            <thead><tr>
-              <th onclick="sortPerf('pt-tr',0)">Transportadora</th>
-              <th onclick="sortPerf('pt-tr',1)">Frete (R$)</th>
-              <th onclick="sortPerf('pt-tr',2)">Mercadoria (R$)</th>
-              <th onclick="sortPerf('pt-tr',3)">% Frete</th>
-              <th onclick="sortPerf('pt-tr',4)">Peso</th>
-              <th onclick="sortPerf('pt-tr',5)">R$/kg</th>
-              <th onclick="sortPerf('pt-tr',6)">CT-es</th>
-            </tr></thead>
-            <tbody id="pt-tr-b"></tbody>
+      <div class="perf-section">
+        <div class="perf-section-title">📋 Performance Detalhada</div>
+        <div class="perf-scroll">
+          <table id="pf-tr">
+            <thead>
+              <tr>
+                <th onclick="pfSort('pf-tr','nome')" id="pf-tr-h0">Transportadora</th>
+                <th onclick="pfSort('pf-tr','vFrete')"         id="pf-tr-h1">Valor Frete</th>
+                <th onclick="pfSort('pf-tr','vMerc')"          id="pf-tr-h2">Valor Mercadoria</th>
+                <th onclick="pfSort('pf-tr','pct')"            id="pf-tr-h3">% Frete</th>
+                <th onclick="pfSort('pf-tr','peso')"           id="pf-tr-h4">Peso Total</th>
+                <th onclick="pfSort('pf-tr','rkg')"            id="pf-tr-h5">R$/kg</th>
+                <th onclick="pfSort('pf-tr','ctes')"           id="pf-tr-h6">CT-es</th>
+              </tr>
+            </thead>
+            <tbody id="pf-tr-body"></tbody>
+            <tfoot id="pf-tr-foot"></tfoot>
           </table>
         </div>
+      </div>
+      </div><!-- /tab-tr -->
+
       <!-- FORNECEDORES -->
       <div id="tab-fo" class="tab-panel">
         <div class="ch2">
@@ -420,24 +456,28 @@ td.tx{font-family:"Sora",sans-serif;font-size:11px}
           <div class="cc"><div class="ct">RANKING FORNECEDORES · CT-es</div><div class="cw t"><canvas id="c-fo-ct"></canvas></div></div>
           <div class="cc"><div class="ct">COMPRA × VENDA POR FORNECEDOR</div><div class="cw t"><canvas id="c-fo-cv"></canvas></div></div>
         </div>
-      </div>
-
-      
-        <div class="pt-hdr">📋 Performance por Fornecedor (todos)</div>
-        <div class="perf-wrap">
-          <table class="perf-tbl" id="pt-fo">
-            <thead><tr>
-              <th onclick="sortPerf('pt-fo',0)">Fornecedor</th>
-              <th onclick="sortPerf('pt-fo',1)">Frete (R$)</th>
-              <th onclick="sortPerf('pt-fo',2)">Mercadoria (R$)</th>
-              <th onclick="sortPerf('pt-fo',3)">% Frete</th>
-              <th onclick="sortPerf('pt-fo',4)">Peso</th>
-              <th onclick="sortPerf('pt-fo',5)">R$/kg</th>
-              <th onclick="sortPerf('pt-fo',6)">CT-es</th>
-            </tr></thead>
-            <tbody id="pt-fo-b"></tbody>
+      <div class="perf-section">
+        <div class="perf-section-title">📋 Performance Detalhada</div>
+        <div class="perf-scroll">
+          <table id="pf-fo">
+            <thead>
+              <tr>
+                <th onclick="pfSort('pf-fo','nome')" id="pf-fo-h0">Fornecedor</th>
+                <th onclick="pfSort('pf-fo','vFrete')"         id="pf-fo-h1">Valor Frete</th>
+                <th onclick="pfSort('pf-fo','vMerc')"          id="pf-fo-h2">Valor Mercadoria</th>
+                <th onclick="pfSort('pf-fo','pct')"            id="pf-fo-h3">% Frete</th>
+                <th onclick="pfSort('pf-fo','peso')"           id="pf-fo-h4">Peso Total</th>
+                <th onclick="pfSort('pf-fo','rkg')"            id="pf-fo-h5">R$/kg</th>
+                <th onclick="pfSort('pf-fo','ctes')"           id="pf-fo-h6">CT-es</th>
+              </tr>
+            </thead>
+            <tbody id="pf-fo-body"></tbody>
+            <tfoot id="pf-fo-foot"></tfoot>
           </table>
         </div>
+      </div>
+      </div><!-- /tab-fo -->
+
       <!-- FILIAIS -->
       <div id="tab-fi" class="tab-panel">
         <div class="ch2">
@@ -448,25 +488,27 @@ td.tx{font-family:"Sora",sans-serif;font-size:11px}
           <div class="cc"><div class="ct">CT-es POR FILIAL ORIGEM</div><div class="cw t"><canvas id="c-fi-oc"></canvas></div></div>
           <div class="cc"><div class="ct">PESO POR FILIAL DESTINO</div><div class="cw t"><canvas id="c-fi-dp"></canvas></div></div>
         </div>
-      </div>
-
-      
-        <div class="pt-hdr">📋 Performance por Filial (todas)</div>
-        <div class="perf-wrap">
-          <table class="perf-tbl" id="pt-fi">
-            <thead><tr>
-              <th onclick="sortPerf('pt-fi',0)">Filial</th>
-              <th onclick="sortPerf('pt-fi',1)">Papel</th>
-              <th onclick="sortPerf('pt-fi',2)">Frete (R$)</th>
-              <th onclick="sortPerf('pt-fi',3)">Mercadoria (R$)</th>
-              <th onclick="sortPerf('pt-fi',4)">% Frete</th>
-              <th onclick="sortPerf('pt-fi',5)">Peso</th>
-              <th onclick="sortPerf('pt-fi',6)">R$/kg</th>
-              <th onclick="sortPerf('pt-fi',7)">CT-es</th>
-            </tr></thead>
-            <tbody id="pt-fi-b"></tbody>
+      <div class="perf-section">
+        <div class="perf-section-title">📋 Performance Detalhada</div>
+        <div class="perf-scroll">
+          <table id="pf-fi">
+            <thead>
+              <tr>
+                <th onclick="pfSort('pf-fi','nome')" id="pf-fi-h0">Filial</th>
+                <th onclick="pfSort('pf-fi','vFrete')"         id="pf-fi-h1">Valor Frete</th>
+                <th onclick="pfSort('pf-fi','vMerc')"          id="pf-fi-h2">Valor Mercadoria</th>
+                <th onclick="pfSort('pf-fi','pct')"            id="pf-fi-h3">% Frete</th>
+                <th onclick="pfSort('pf-fi','peso')"           id="pf-fi-h4">Peso Total</th>
+                <th onclick="pfSort('pf-fi','rkg')"            id="pf-fi-h5">R$/kg</th>
+                <th onclick="pfSort('pf-fi','ctes')"           id="pf-fi-h6">CT-es</th>
+              </tr>
+            </thead>
+            <tbody id="pf-fi-body"></tbody>
+            <tfoot id="pf-fi-foot"></tfoot>
           </table>
         </div>
+      </div>
+      </div><!-- /tab-fi -->
       <!-- ROTAS -->
       <div id="tab-ro" class="tab-panel">
         <div class="ch2">
@@ -477,9 +519,27 @@ td.tx{font-family:"Sora",sans-serif;font-size:11px}
           <div class="cc"><div class="ct">TOP ROTAS · R$/kg</div><div class="cw t"><canvas id="c-ro-rk"></canvas></div></div>
           <div class="cc"><div class="ct">TOP ROTAS · CT-es</div><div class="cw t"><canvas id="c-ro-ct"></canvas></div></div>
         </div>
+      <div class="perf-section">
+        <div class="perf-section-title">📋 Performance Detalhada</div>
+        <div class="perf-scroll">
+          <table id="pf-ro">
+            <thead>
+              <tr>
+                <th onclick="pfSort('pf-ro','nome')" id="pf-ro-h0">UF Destino</th>
+                <th onclick="pfSort('pf-ro','vFrete')"         id="pf-ro-h1">Valor Frete</th>
+                <th onclick="pfSort('pf-ro','vMerc')"          id="pf-ro-h2">Valor Mercadoria</th>
+                <th onclick="pfSort('pf-ro','pct')"            id="pf-ro-h3">% Frete</th>
+                <th onclick="pfSort('pf-ro','peso')"           id="pf-ro-h4">Peso Total</th>
+                <th onclick="pfSort('pf-ro','rkg')"            id="pf-ro-h5">R$/kg</th>
+                <th onclick="pfSort('pf-ro','ctes')"           id="pf-ro-h6">CT-es</th>
+              </tr>
+            </thead>
+            <tbody id="pf-ro-body"></tbody>
+            <tfoot id="pf-ro-foot"></tfoot>
+          </table>
+        </div>
       </div>
-
-      <!-- INSIGHTS -->
+      </div><!-- /tab-ro -->
       <div id="tab-ins" class="tab-panel">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
           <div style="font-size:11px;color:var(--text2)">Clique em qualquer insight para detalhar os CT-es relacionados</div>
@@ -557,13 +617,30 @@ td.tx{font-family:"Sora",sans-serif;font-size:11px}
 
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import{getFirestore,collection,doc,setDoc,getDocs,deleteDoc}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import{getFirestore,collection,doc,setDoc,getDocs,deleteDoc,writeBatch}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 const cfg={apiKey:"AIzaSyCofRClTS77tjLqo_R2m-9VIrgxHI02ojI",authDomain:"indicador-frete-be8.firebaseapp.com",projectId:"indicador-frete-be8",storageBucket:"indicador-frete-be8.firebasestorage.app",messagingSenderId:"787823147349",appId:"1:787823147349:web:e45f05e2dde93aa1e4d7dc"};
 try{
   const app=initializeApp(cfg);const db=getFirestore(app);
   window.fbSave=async c=>{try{await setDoc(doc(db,"ctes",c.chaveCte),c);return true}catch(e){return false}};
   window.fbLoad=async()=>{try{const s=await getDocs(collection(db,"ctes"));const r=[];s.forEach(d=>r.push(d.data()));return r}catch(e){return[]}};
-  window.fbClear=async()=>{try{const s=await getDocs(collection(db,"ctes"));for(const d of s.docs)await deleteDoc(doc(db,"ctes",d.id));return true}catch(e){return false}};
+  window.fbClear=async(onProgress)=>{
+    try{
+      const s=await getDocs(collection(db,"ctes"));
+      const docs=s.docs;
+      const total=docs.length;
+      if(total===0){if(onProgress)onProgress(0,0);return true;}
+      let deleted=0;
+      const BATCH_SIZE=400;
+      for(let i=0;i<docs.length;i+=BATCH_SIZE){
+        const batch=writeBatch(db);
+        docs.slice(i,i+BATCH_SIZE).forEach(d=>batch.delete(doc(db,"ctes",d.id)));
+        await batch.commit();
+        deleted+=Math.min(BATCH_SIZE,docs.length-i);
+        if(onProgress)onProgress(deleted,total);
+      }
+      return true;
+    }catch(e){console.error("fbClear error:",e);return false;}
+  };
   document.getElementById("fb-dot").classList.add("on");
   document.getElementById("fb-lbl").textContent="Firebase OK";
   addLog("Firebase Firestore conectado.","ok");
@@ -957,7 +1034,7 @@ function renderDash(data){
     </div>`).join("");
   renderCharts(data);
   renderInsights(data);
-  if(typeof renderPerfTables==="function")renderPerfTables(data);
+  if(typeof renderAllPerfTables==="function")renderAllPerfTables(data);
   page=1;renderTbl(FIL);
 }
 
@@ -965,15 +1042,21 @@ function renderDash(data){
    CHARTS — Chart.js + DataLabels
 ══════════════════════════════════════════════ */
 Chart.register(ChartDataLabels);
-const DL={display:true,color:"#ffffff",font:{family:"JetBrains Mono",size:9,weight:"700"},formatter:v=>v>=1000000?(v/1e6).toFixed(1)+"M":v>=1000?(v/1000).toFixed(0)+"k":typeof v==="number"?v.toFixed(v<10?2:0):v,clamp:true};
+const DL={display:true,color:"#ffffff",font:{family:"Sora",size:9,weight:"800"},formatter:v=>v>=1000000?(v/1e6).toFixed(1)+"M":v>=1000?(v/1000).toFixed(0)+"k":typeof v==="number"?v.toFixed(v<10?2:0):v,clamp:true};
 const DLH={...DL,anchor:"end",align:"end"};
+const DL_BAR={...DLH};
+const DL_BAR_P={...DLH,formatter:function(v){if(v>=1e6)return(v/1e6).toFixed(1)+"MT";if(v>=1e3)return(v/1e3).toFixed(1)+"T";return Math.round(v)+"kg";}};
+const DL_PCT={display:true,color:"#ffffff",font:{family:"Sora",size:9,weight:"800"},formatter:function(v){return (v||0).toFixed(2)+"%";},anchor:"end",align:"end",clamp:true};
 const SCALES={x:{ticks:{color:"#6098b8",font:{size:9}},grid:{color:"rgba(255,255,255,.04)"}},y:{ticks:{color:"#6098b8",font:{size:9}},grid:{color:"rgba(255,255,255,.04)"}}};
+const SCALES_H={x:{ticks:{color:"#6098b8",font:{size:9}},grid:{color:"rgba(255,255,255,.04)"}},y:{ticks:{color:"#ffffff",font:{size:9,weight:"600"}},grid:{color:"rgba(255,255,255,.04)"}}};
+const SCALES_LOG={x:{ticks:{color:"#6098b8",font:{size:9}},grid:{color:"rgba(255,255,255,.04)"}},y:{type:"logarithmic",ticks:{color:"#6098b8",font:{size:9},callback:function(v,i,vals){if(v===0)return"0";if(v>=1e6)return(v/1e6).toFixed(0)+"M";if(v>=1e3)return(v/1e3).toFixed(0)+"k";return v;}},grid:{color:"rgba(255,255,255,.04)"}}};
+const SCALES_LOG_H={x:{type:"logarithmic",ticks:{color:"#6098b8",font:{size:9},callback:function(v,i,vals){if(v===0)return"0";if(v>=1e6)return(v/1e6).toFixed(0)+"M";if(v>=1e3)return(v/1e3).toFixed(0)+"k";return v;}},grid:{color:"rgba(255,255,255,.04)"}},y:{ticks:{color:"#ffffff",font:{size:9,weight:"600"}},grid:{color:"rgba(255,255,255,.04)"}}};
 
 function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 function mkB(id,labs,dsets,opts={}){dc(id);const ctx=document.getElementById(id);if(!ctx)return;charts[id]=new Chart(ctx,{type:"bar",data:{labels:labs,datasets:dsets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#6098b8",font:{size:10},boxWidth:12}},datalabels:{...DLH},...(opts.plugins||{})},scales:SCALES,...opts}});}
-function mkBH(id,labs,dsets,opts={}){dc(id);const ctx=document.getElementById(id);if(!ctx)return;charts[id]=new Chart(ctx,{type:"bar",data:{labels:labs,datasets:dsets},options:{responsive:true,maintainAspectRatio:false,indexAxis:"y",plugins:{legend:{display:false},datalabels:{...DLH},...(opts.plugins||{})},scales:SCALES,...opts}});}
+function mkBH(id,labs,dsets,opts={}){dc(id);const ctx=document.getElementById(id);if(!ctx)return;charts[id]=new Chart(ctx,{type:"bar",data:{labels:labs,datasets:dsets},options:{responsive:true,maintainAspectRatio:false,indexAxis:"y",plugins:{legend:{display:false},datalabels:opts.isPct?DL_PCT:(opts.isPeso?DL_BAR_P:DLH),...(opts.plugins||{})},scales:opts.useLog?SCALES_LOG_H:SCALES_H,...opts}});}
 function mkL(id,labs,dsets,opts={}){dc(id);const ctx=document.getElementById(id);if(!ctx)return;charts[id]=new Chart(ctx,{type:"line",data:{labels:labs,datasets:dsets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#6098b8",font:{size:10},boxWidth:10}},datalabels:{display:false},...(opts.plugins||{})},scales:SCALES,...opts}});}
-function mkD(id,labs,data,cols){dc(id);const ctx=document.getElementById(id);if(!ctx)return;charts[id]=new Chart(ctx,{type:"doughnut",data:{labels:labs,datasets:[{data,backgroundColor:cols,borderColor:"#0a1e2e",borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"right",labels:{color:"#6098b8",font:{size:10},boxWidth:10}},datalabels:{display:true,color:"#fff",font:{size:9,weight:"700"},formatter:(v,c)=>{const t=c.dataset.data.reduce((a,b)=>a+b,0);return t>0?(v/t*100).toFixed(1)+"%":""}}}}});}
+function mkD(id,labs,data,cols){dc(id);const ctx=document.getElementById(id);if(!ctx)return;charts[id]=new Chart(ctx,{type:"doughnut",data:{labels:labs,datasets:[{data,backgroundColor:cols,borderColor:"#0a1e2e",borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"right",labels:{color:"#6098b8",font:{size:10},boxWidth:10}},datalabels:{display:true,color:"#fff",font:{size:9,weight:"700"},formatter:(v,c)=>{const t=c.dataset.data.reduce((a,b)=>a+b,0);return t>0?(v/t*100).toFixed(2)+"%":""}}}}});}
 
 function renderCharts(data){
   const fS=arr=>(arr||[]).reduce((s,c)=>s+c.vFrete,0);
@@ -995,7 +1078,7 @@ function renderCharts(data){
   document.getElementById("ct-pct").textContent="Média: "+avgP.toFixed(2)+"%";
   mkB("c-mes",mL,[{label:"Frete (R$)",data:mK.map(m=>fS(byM[m])),backgroundColor:mK.map((_,i)=>`rgba(0,${163+i*6},${255-i*10},.75)`),borderRadius:5}]);
   mkL("c-pct",mL,[{label:"% Frete/Merc",data:pctV,borderColor:"#00d084",backgroundColor:"rgba(0,208,132,.1)",tension:.4,fill:true,pointRadius:4,pointBackgroundColor:"#00d084"},{label:"Meta 5%",data:pctV.map(()=>5),borderColor:"rgba(255,76,106,.5)",borderDash:[5,5],tension:0,fill:false,pointRadius:0}]);
-  mkBH("c-tr-top",trT.slice(0,8).map(([k])=>k.length>18?k.slice(0,16)+"…":k),[{label:"Frete",data:trT.slice(0,8).map(([,v])=>fS(v)),backgroundColor:COLS.slice(0,8).map(c=>c+"cc"),borderRadius:4}]);
+  mkBH("c-tr-top",trT.slice(0,8).map(([k])=>k.length>18?k.slice(0,16)+"…":k),[{label:"Frete",data:trT.slice(0,8).map(([,v])=>fS(v)),backgroundColor:COLS.slice(0,8).map(c=>c+"cc"),borderRadius:4}],{useLog:true});
   mkD("c-uf",Object.keys(byUF),Object.keys(byUF).map(u=>fS(byUF[u])),COLS);
   const trimK=Object.keys(byTrim).sort();
   mkB("c-trim",trimK,[{label:"Frete",data:trimK.map(t=>fS(byTrim[t])),backgroundColor:"rgba(0,208,132,.7)",borderRadius:4},{label:"Mercadoria",data:trimK.map(t=>byTrim[t].reduce((s,c)=>s+c.vMerc,0)),backgroundColor:"rgba(0,163,255,.4)",borderRadius:4}]);
@@ -1016,7 +1099,7 @@ function renderCharts(data){
   mkBH("c-tr-fr",trL,[{label:"Frete",data:trT.map(([,v])=>fS(v)),backgroundColor:"rgba(0,208,132,.75)",borderRadius:4}]);
   mkBH("c-tr-pe",trL,[{label:"Peso",data:trT.map(([,v])=>pS(v)),backgroundColor:"rgba(0,163,255,.75)",borderRadius:4}]);
   mkBH("c-tr-rk",trL,[{label:"R$/kg",data:trT.map(([,v])=>rA(v)),backgroundColor:"rgba(0,229,255,.75)",borderRadius:4}]);
-  mkBH("c-tr-pc",trL,[{label:"% Frete",data:trT.map(([,v])=>pA(v)),backgroundColor:"rgba(255,179,64,.75)",borderRadius:4}]);
+  mkBH("c-tr-pc",trL,[{label:"% Frete",data:trT.map(([,v])=>pA(v)),backgroundColor:"rgba(255,179,64,.8)",borderRadius:4}],{isPct:true});
   mkB("c-tr-cv",trT.slice(0,8).map(([k])=>k.length>14?k.slice(0,12)+"…":k),[
     {label:"COMPRA",data:trT.slice(0,8).map(([,v])=>fS(v.filter(c=>c.tipo_op==="COMPRA"))),backgroundColor:"rgba(0,208,132,.75)",borderRadius:4},
     {label:"VENDA",data:trT.slice(0,8).map(([,v])=>fS(v.filter(c=>c.tipo_op==="VENDA"))),backgroundColor:"rgba(0,163,255,.75)",borderRadius:4},
@@ -1096,7 +1179,7 @@ function renderInsights(data){
     const items=byMes[m],prev=mK[mK.indexOf(m)-1];
     const vA=fS(items),vP=prev?fS(byMes[prev]):null;
     const diff=vP?((vA-vP)/vP*100):null;
-    return mkI("📅","Análise "+m,"R$ "+fmtB(vA)+" · "+items.length+" CT-es","% Frete: "+pA(items).toFixed(2)+"% · R$/kg: "+rA(items).toFixed(4)+(diff!==null?" · vs anterior: "+(diff>=0?"+":"")+diff.toFixed(1)+"%":""),diff!==null&&diff>10?"wa":diff!==null&&diff<-10?"ok":"in","mes_"+m,items);
+    return mkI("📅","Análise "+m,"R$ "+fmtB(vA)+" · "+items.length+" CT-es","% Frete: "+pA(items).toFixed(2)+"% · R$/kg: "+rA(items).toFixed(4)+(diff!==null?" · vs anterior: "+(diff>=0?"+":"")+diff.toFixed(2)+"%":""),diff!==null&&diff>10?"wa":diff!==null&&diff<-10?"ok":"in","mes_"+m,items);
   });
   const sec4=[
     mkI("⚖️","Compra vs Venda · Frete","C: R$ "+fmtB(fS(byOp["COMPRA"]||[]))+" · V: R$ "+fmtB(fS(byOp["VENDA"]||[])),"Comparativo entre operações de compra e venda.","in","cv_fr"),
@@ -1357,9 +1440,9 @@ async function exportInsightsPDF(){
     {l:"R$/kg Médio",v:avgRkg.toFixed(4),al:false,d:"Custo médio por kg no período"},
     {l:"Ticket Médio CT-e",v:"R$ "+fmt(avgF),al:false,d:"Frete médio por documento"},
     {l:"CT-es Outlier (>2× média)",v:outliers,al:outliers>0,d:"Fretes com custo acima de 2× a média"},
-    {l:"Concentração Top Transportadora",v:trTopConc.toFixed(1)+"%",al:trTopConc>60,d:(trTop||"–")+" concentra "+trTopConc.toFixed(1)+"% do custo"},
+    {l:"Concentração Top Transportadora",v:trTopConc.toFixed(2)+"%",al:trTopConc>60,d:(trTop||"–")+" concentra "+trTopConc.toFixed(1)+"% do custo"},
     ...["COMPRA","VENDA","IMPORTAÇÃO","OUTROS"].map(op=>({l:"Operação "+op,v:(byOp[op]||[]).length+" CT-es · R$ "+fmtB(fS(byOp[op]||[])),al:false,d:"% Frete: "+pA(byOp[op]||[]).toFixed(2)+"% · R$/kg: "+rA(byOp[op]||[]).toFixed(4)})),
-    ...mK.slice(-3).map(m=>{const prev=mK[mK.indexOf(m)-1];const vA=fS(byMes[m]),vP=prev?fS(byMes[prev]):null;const diff=vP?((vA-vP)/vP*100):null;return{l:"Período "+m,v:"R$ "+fmtB(vA)+" · "+byMes[m].length+" CT-es",al:diff!==null&&diff>10,d:diff!==null?"Var. vs anterior: "+(diff>=0?"+":"")+diff.toFixed(1)+"%":"Primeiro período"};}),
+    ...mK.slice(-3).map(m=>{const prev=mK[mK.indexOf(m)-1];const vA=fS(byMes[m]),vP=prev?fS(byMes[prev]):null;const diff=vP?((vA-vP)/vP*100):null;return{l:"Período "+m,v:"R$ "+fmtB(vA)+" · "+byMes[m].length+" CT-es",al:diff!==null&&diff>10,d:diff!==null?"Var. vs anterior: "+(diff>=0?"+":"")+diff.toFixed(2)+"%":"Primeiro período"};}),
   ];
   pdf.setFontSize(10);pdf.setTextColor(...WN);pdf.setFont("helvetica","bold");pdf.text("PAINEL DE INSIGHTS",M,y);y+=8;
   insData.forEach((ins)=>{
@@ -1395,15 +1478,59 @@ async function exportInsightsPDF(){
    CLEAR
 ══════════════════════════════════════════════ */
 async function clearAll(){
-  if(!confirm("Remover TODOS os dados? Limpará também o Firebase.")) return;
+  if(!confirm("⚠️ Isso vai remover TODOS os "+window.ALL.length+" CT-es da memória E do Firebase. Deseja continuar?")) return;
+
+  // Reset local state immediately
   window.ALL=[];FIL=[];
-  if(window.fbClear) await fbClear();
   Object.keys(charts).forEach(k=>{try{charts[k].destroy();}catch(e){}});charts={};
+
+  // Show progress
+  document.getElementById("prog").style.display="block";
+  document.getElementById("pb").style.width="0%";
+  document.getElementById("pb-l").textContent="Conectando ao Firebase para limpar...";
+  document.getElementById("p-tot").textContent="?";
+  document.getElementById("p-pro").textContent="0";
+  document.getElementById("p-dup").textContent="0";
+  document.getElementById("p-err").textContent="0";
+
+  addLog("Iniciando limpeza do Firebase...","warn");
+
+  if(window.fbClear){
+    const ok = await fbClear(function(deleted, total){
+      const pct = total>0 ? (deleted/total*100) : 100;
+      document.getElementById("pb").style.width=pct+"%";
+      document.getElementById("pb-l").textContent="Removendo: "+deleted+"/"+total+" documentos...";
+      document.getElementById("p-tot").textContent=total;
+      document.getElementById("p-pro").textContent=deleted;
+    });
+    if(ok){
+      addLog("Firebase limpo com sucesso.","ok");
+    } else {
+      addLog("Erro ao limpar Firebase — verifique conexão.","err");
+    }
+  } else {
+    addLog("Firebase offline — apenas memória local limpa.","warn");
+  }
+
+  // Hide progress and dashboard
+  setTimeout(function(){
+    document.getElementById("prog").style.display="none";
+    document.getElementById("pb").style.width="0%";
+    document.getElementById("pb-l").textContent="Aguardando...";
+    document.getElementById("p-tot").textContent="0";
+    document.getElementById("p-pro").textContent="0";
+    document.getElementById("p-dup").textContent="0";
+    document.getElementById("p-err").textContent="0";
+  }, 1500);
+
   document.getElementById("dash").style.display="none";
   document.getElementById("es").style.display="block";
   document.getElementById("cte-ctr").textContent="0 CT-es";
-  document.getElementById("prog").style.display="none";
-  addLog("Dados removidos.","warn");
+  document.getElementById("imp-count").textContent="0";
+  document.getElementById("ist-xml").textContent="📄 CT-es: 0";
+  document.getElementById("uz-xml-b").style.display="none";
+  document.getElementById("uz-xml-b").textContent="";
+  addLog("Todos os dados removidos. Pronto para nova importação.","warn");
 }
 
 /* ══════════════════════════════════════════════
@@ -1549,5 +1676,137 @@ window.repad = function(){
   addLog("Repadronizacao: "+window.ALL.length+" CT-es atualizados.","ok");
   refresh();
 };
+
+
+/* ════════════════════════════════════════════════════════
+   PERFORMANCE TABLES — pf-tr, pf-fo, pf-fi, pf-ro
+   Colunas: nome | vFrete | vMerc | pct | peso | rkg | ctes
+════════════════════════════════════════════════════════ */
+var _pfSortDir = {};  // { tableId: { field, asc } }
+
+function pfCalc(items) {
+  var vFrete = items.reduce(function(s,c){ return s+(c.vFrete||0); }, 0);
+  var vMerc  = items.reduce(function(s,c){ return s+(c.vMerc||c.vMercadoria||0); }, 0);
+  var peso   = items.reduce(function(s,c){ return s+(c.peso||0); }, 0);
+  var pct    = vMerc > 0 ? vFrete/vMerc*100 : 0;
+  var rkg    = peso  > 0 ? vFrete/peso       : 0;
+  return { vFrete:vFrete, vMerc:vMerc, peso:peso, pct:pct, rkg:rkg, ctes:items.length };
+}
+
+function pfSort(tableId, field) {
+  var cur = _pfSortDir[tableId] || { field:'vFrete', asc:false };
+  var asc = (cur.field === field) ? !cur.asc : false;
+  _pfSortDir[tableId] = { field:field, asc:asc };
+  // Update header classes
+  var tbl = document.getElementById(tableId);
+  if (!tbl) return;
+  var fields = ['nome','vFrete','vMerc','pct','peso','rkg','ctes'];
+  fields.forEach(function(f, i) {
+    var th = document.getElementById(tableId+'-h'+i);
+    if (!th) return;
+    th.classList.remove('asc','desc');
+    if (f === field) th.classList.add(asc ? 'asc' : 'desc');
+  });
+  // Re-render with new sort
+  _pfRender(tableId);
+}
+
+// Store data per table for re-sort
+var _pfData = {};
+
+function _pfRender(tableId) {
+  var rows = _pfData[tableId];
+  if (!rows || !rows.length) return;
+  var sd = _pfSortDir[tableId] || { field:'vFrete', asc:false };
+  var sorted = rows.slice().sort(function(a,b) {
+    var va = a[sd.field], vb = b[sd.field];
+    if (typeof va === 'string') return sd.asc ? va.localeCompare(vb) : vb.localeCompare(va);
+    return sd.asc ? va-vb : vb-va;
+  });
+  var tbody = document.getElementById(tableId+'-body');
+  var tfoot = document.getElementById(tableId+'-foot');
+  if (!tbody) return;
+
+  // Totals
+  var totF=0, totM=0, totP=0, totC=0;
+  sorted.forEach(function(r){ totF+=r.vFrete; totM+=r.vMerc; totP+=r.peso; totC+=r.ctes; });
+  var totPct = totM>0 ? totF/totM*100 : 0;
+  var totRkg = totP>0 ? totF/totP     : 0;
+
+  tbody.innerHTML = sorted.map(function(r, idx) {
+    var pctCls = r.pct > 5 ? 'td-pct-warn' : 'td-pct-ok';
+    var rowBg  = idx%2===0 ? '' : 'style="background:rgba(255,255,255,.02)"';
+    return '<tr '+rowBg+'>'
+      + '<td class="td-name" title="'+r.nome+'">'+r.nome+'</td>'
+      + '<td class="td-frete">R$ '+fmtBig(r.vFrete)+'</td>'
+      + '<td>R$ '+fmtBig(r.vMerc)+'</td>'
+      + '<td class="'+pctCls+'">'+r.pct.toFixed(2)+'%</td>'
+      + '<td>'+fmtP(r.peso)+'</td>'
+      + '<td>'+r.rkg.toFixed(4)+'</td>'
+      + '<td class="td-ctes">'+r.ctes+'</td>'
+      + '</tr>';
+  }).join('');
+
+  if (tfoot) {
+    var tfPct = totM>0 ? totF/totM*100 : 0;
+    var tfPctCls = tfPct > 5 ? 'td-pct-warn' : 'td-pct-ok';
+    tfoot.innerHTML = '<tr>'
+      + '<td class="td-name" style="color:var(--acc1)">⬛ TOTAL ('+sorted.length+')</td>'
+      + '<td class="td-frete">R$ '+fmtBig(totF)+'</td>'
+      + '<td>R$ '+fmtBig(totM)+'</td>'
+      + '<td class="'+tfPctCls+'">'+tfPct.toFixed(2)+'%</td>'
+      + '<td>'+fmtP(totP)+'</td>'
+      + '<td>'+totRkg.toFixed(4)+'</td>'
+      + '<td class="td-ctes">'+totC+'</td>'
+      + '</tr>';
+  }
+}
+
+function renderAllPerfTables(data) {
+  // ── Transportadoras ──
+  var byTr = gb(data, 'tr_pad');
+  _pfData['pf-tr'] = Object.keys(byTr).map(function(nome) {
+    var p = pfCalc(byTr[nome]);
+    return { nome:nome, vFrete:p.vFrete, vMerc:p.vMerc, pct:p.pct, peso:p.peso, rkg:p.rkg, ctes:p.ctes };
+  });
+  _pfSortDir['pf-tr'] = { field:'vFrete', asc:false };
+  _pfRender('pf-tr');
+
+  // ── Fornecedores ──
+  var byFo = gb(data, 'fo_pad');
+  _pfData['pf-fo'] = Object.keys(byFo).map(function(nome) {
+    var p = pfCalc(byFo[nome]);
+    return { nome:nome, vFrete:p.vFrete, vMerc:p.vMerc, pct:p.pct, peso:p.peso, rkg:p.rkg, ctes:p.ctes };
+  });
+  _pfSortDir['pf-fo'] = { field:'vFrete', asc:false };
+  _pfRender('pf-fo');
+
+  // ── Filiais ──
+  var filMap = {};
+  data.forEach(function(c) {
+    var addFil = function(nome) {
+      if (!nome) return;
+      if (!filMap[nome]) filMap[nome] = [];
+      filMap[nome].push(c);
+    };
+    addFil(c.fil_ori);
+    if (c.fil_dest && c.fil_dest !== c.fil_ori) addFil(c.fil_dest);
+  });
+  _pfData['pf-fi'] = Object.keys(filMap).map(function(nome) {
+    var p = pfCalc(filMap[nome]);
+    return { nome:nome, vFrete:p.vFrete, vMerc:p.vMerc, pct:p.pct, peso:p.peso, rkg:p.rkg, ctes:p.ctes };
+  });
+  _pfSortDir['pf-fi'] = { field:'vFrete', asc:false };
+  _pfRender('pf-fi');
+
+  // ── Rotas por UF Destino ──
+  var byUF = gb(data, 'ufFim');
+  _pfData['pf-ro'] = Object.keys(byUF).map(function(nome) {
+    var p = pfCalc(byUF[nome]);
+    return { nome:nome||'N/A', vFrete:p.vFrete, vMerc:p.vMerc, pct:p.pct, peso:p.peso, rkg:p.rkg, ctes:p.ctes };
+  });
+  _pfSortDir['pf-ro'] = { field:'vFrete', asc:false };
+  _pfRender('pf-ro');
+}
 
 </script>
