@@ -291,7 +291,7 @@ footer span{color:var(--teal)}
   <span class="uz-icon">📦</span>
   <strong>Arraste os XMLs de CT-e aqui ou clique para selecionar</strong>
   <p>Aceita múltiplos arquivos simultaneamente · Importação paralela até 20× mais rápida</p>
-  <p style="margin-top:6px;color:var(--teal);font-size:11px">Filtro automático: CNPJ origem 04.428.307/0017-45 (Be8)</p>
+  <p style="margin-top:6px;color:var(--teal);font-size:11px">Aceita qualquer CT-e válido · Todos os emitentes e destinatários</p>
 </div>
 
 <!-- FILTERS BAR -->
@@ -601,8 +601,6 @@ const fbDb = firebase.firestore();
 const COL = "ctes_be8";
 
 // ── CONSTANTES ─────────────────────────────────────────
-// CNPJ raiz Be8 = 04.428.307 (emissor/remetente)
-const CNPJ_RAIZ = "04428307";
 const ML = {1:"Jan",2:"Fev",3:"Mar",4:"Abr",5:"Mai",6:"Jun",7:"Jul",8:"Ago",9:"Set",10:"Out",11:"Nov",12:"Dez"};
 const PAL = ["#00d4aa","#60a5fa","#c084fc","#f59e0b","#ef4444","#34d399","#f97316","#a78bfa","#38bdf8","#fb7185","#4ade80","#facc15"];
 const DIAS = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
@@ -613,7 +611,6 @@ let activeView = "mes", activeProd = "", metaRpkg = 2.50;
 
 // ── HELPERS ────────────────────────────────────────────
 const normC = s => String(s||"").replace(/\D/g,"");
-const isBase = c => normC(c).substring(0,8) === CNPJ_RAIZ;
 const grp = (a,f) => a.reduce((acc,v)=>{const k=f(v);if(!acc[k])acc[k]=[];acc[k].push(v);return acc;},{});
 const sumF = (a,k) => a.reduce((s,v)=>s+(v[k]||0),0);
 const fmt = v => v.toLocaleString("pt-BR",{style:"currency",currency:"BRL",minimumFractionDigits:2});
@@ -749,78 +746,110 @@ function parseCTe(xmlText,fname){
   try{
     const doc=new DOMParser().parseFromString(xmlText,"application/xml");
     if(doc.querySelector("parsererror"))return null;
-    const ns="http://www.portalfiscal.inf.br/cte";
-    const get=(root,tag)=>{let e=root.getElementsByTagNameNS(ns,tag)[0]||root.getElementsByTagName(tag)[0];return e?e.textContent.trim():"";};
-    const infCte=doc.querySelector("infCte")||doc.getElementsByTagName("infCte")[0];
+
+    // Helper: busca tag em qualquer namespace
+    const getTag=(root,tag)=>{
+      const byNS=root.getElementsByTagNameNS("http://www.portalfiscal.inf.br/cte",tag);
+      if(byNS&&byNS.length>0)return byNS[0].textContent.trim();
+      const byLocal=root.getElementsByTagName(tag);
+      if(byLocal&&byLocal.length>0)return byLocal[0].textContent.trim();
+      return"";
+    };
+    const getEl=(root,tag)=>{
+      const byNS=root.getElementsByTagNameNS("http://www.portalfiscal.inf.br/cte",tag);
+      if(byNS&&byNS.length>0)return byNS[0];
+      const byLocal=root.getElementsByTagName(tag);
+      if(byLocal&&byLocal.length>0)return byLocal[0];
+      return null;
+    };
+
+    // Encontra o elemento raiz infCte
+    const infCte=getEl(doc,"infCte");
     if(!infCte)return null;
 
-    let chave=(infCte.getAttribute("Id")||get(infCte,"chCTe")||"").replace(/\D/g,"");
-    if(!chave)chave=fname.replace(/\D/g,"").substring(0,44)||fname;
+    // ── CHAVE ──
+    let chave=(infCte.getAttribute("Id")||"").replace(/\D/g,"");
+    if(!chave)chave=getTag(doc,"chCTe").replace(/\D/g,"");
+    if(!chave)chave=fname.replace(/[^0-9]/g,"").substring(0,44)||fname;
 
-    const emit=infCte.querySelector("emit")||infCte.getElementsByTagName("emit")[0];
-    const emitCnpj=emit?normC(get(emit,"CNPJ")||get(emit,"CPF")):"";
+    // ── IDE ──
+    const ide=getEl(infCte,"ide");
+    const nCTe=ide?getTag(ide,"nCT"):"";
+    const dhEmi=ide?(getTag(ide,"dhEmi")||getTag(ide,"dEmi")):"";
+    const emissao=dhEmi?dhEmi.substring(0,10):"";
+    const UFIni=ide?getTag(ide,"UFIni"):"";
+    const UFFim=ide?getTag(ide,"UFFim"):"";
 
-    // Filtro: remetente deve ser Be8
-    if(!isBase(emitCnpj))return null;
+    // ── EMITENTE (quem emitiu o CT-e = transportadora) ──
+    const emit=getEl(infCte,"emit");
+    const transpNome=emit?(getTag(emit,"xNome")||getTag(emit,"xFant")):"N/I";
+    const transpCnpj=emit?normC(getTag(emit,"CNPJ")||getTag(emit,"CPF")):"";
 
-    const frete=parseFloat(get(infCte,"vTPrest")||get(infCte,"vRec")||"0")||0;
-    
-    // Peso: q (quantidade) × U (unidade) ou inftCarga
+    // ── TOMADOR / REMETENTE / DESTINATÁRIO ──
+    const rem=getEl(infCte,"rem");
+    const dest=getEl(infCte,"dest");
+    const destNome=dest?(getTag(dest,"xNome")||"N/I"):(rem?getTag(rem,"xNome"):"N/I");
+    const destCnpj=dest?normC(getTag(dest,"CNPJ")||getTag(dest,"CPF")):"";
+
+    // ── VALOR DO FRETE ──
+    const vPrest=getEl(infCte,"vPrest");
+    let frete=0;
+    if(vPrest){
+      frete=parseFloat(getTag(vPrest,"vTPrest")||"0")||0;
+      if(!frete)frete=parseFloat(getTag(vPrest,"vRec")||"0")||0;
+    }
+    if(!frete)frete=parseFloat(getTag(infCte,"vTPrest")||getTag(infCte,"vRec")||"0")||0;
+
+    // ── PESO ──
     let peso=0;
-    const infCarga=infCte.querySelector("infCarga")||infCte.getElementsByTagName("infCarga")[0];
+    // Tenta infCarga > infQ
+    const infCarga=getEl(infCte,"infCarga");
     if(infCarga){
-      const qCarga=infCarga.querySelector("infQ")||infCarga.getElementsByTagName("infQ")[0];
-      if(qCarga){
-        const tp=get(qCarga,"cUnid");const vl=parseFloat(get(qCarga,"qCarga")||"0")||0;
-        if(tp==="01")peso=vl*1000; // toneladas
-        else if(tp==="03")peso=vl; // kg
-        else peso=vl;
+      const infQs=infCarga.getElementsByTagNameNS("http://www.portalfiscal.inf.br/cte","infQ");
+      const infQsLocal=infCarga.getElementsByTagName("infQ");
+      const qs=infQs.length>0?infQs:infQsLocal;
+      for(let i=0;i<qs.length;i++){
+        const q=qs[i];
+        const cUnid=getTag(q,"cUnid");
+        const qCarga=parseFloat(getTag(q,"qCarga")||"0")||0;
+        if(cUnid==="01"){peso=qCarga*1000;break;} // ton → kg
+        if(cUnid==="03"){peso=qCarga;break;}       // kg
+        if(cUnid==="02"){peso=qCarga;break;}       // m3 (usa como referência)
+        if(qCarga>0){peso=qCarga;}                 // qualquer valor
       }
-      if(!peso)peso=parseFloat(get(infCarga,"vCarga")||"0")||0;
+      // fallback: vCarga como último recurso de peso
+      if(!peso){const vc=parseFloat(getTag(infCarga,"vCarga")||"0")||0;if(vc>0&&vc<100000)peso=vc;}
     }
+    // fallback: tot > qNF ou pTot
     if(!peso){
-      // fallback: infNFe
-      const tot=infCte.querySelector("tot")||infCte.getElementsByTagName("tot")[0];
-      if(tot)peso=parseFloat(get(tot,"qNF")||"0")||0;
+      const tot=getEl(infCte,"tot");
+      if(tot){
+        peso=parseFloat(getTag(tot,"qNF")||"0")||0;
+        if(!peso)peso=parseFloat(getTag(tot,"pTot")||"0")||0;
+      }
     }
 
-    // Destino
-    const dest=infCte.querySelector("dest")||infCte.getElementsByTagName("dest")[0];
-    const destNome=dest?get(dest,"xNome"):"";
-    const destCnpj=dest?normC(get(dest,"CNPJ")||get(dest,"CPF")):"";
-    const ide=infCte.querySelector("ide")||infCte.getElementsByTagName("ide")[0];
-    const destUF=ide?get(ide,"UFIni"):"";
-    const origUF=ide?get(ide,"UFIni"):"";
-    const destUFf=ide?get(ide,"UFFim"):"";
-
-    // Emitente/Transportadora
-    const transpNome=emit?get(emit,"xNome"):"";
-    const transpCnpj=emitCnpj;
-
-    // Número e data
-    const nCTe=get(ide,"nCT")||"";
-    const dhEmi=get(ide,"dhEmi")||get(infCte,"dEmi")||"";
-    const emissao=dhEmi.substring(0,10);
-
-    // Produto / natureza
+    // ── PRODUTO / NATUREZA ──
     let produto="";
-    const nfRef=infCte.querySelector("infNFe")||infCte.getElementsByTagName("infNFe")[0];
-    if(nfRef)produto=get(nfRef,"natOp")||"";
-    if(!produto){
-      const nat=infCte.querySelector("natOp")||infCte.getElementsByTagName("natOp")[0];
-      if(nat)produto=nat.textContent.trim();
-    }
+    // natOp no ide
+    if(ide)produto=getTag(ide,"natOp");
+    // infNFe natOp
+    if(!produto){const infNFe=getEl(infCte,"infNFe");if(infNFe)produto=getTag(infNFe,"natOp");}
+    // xProd genérico
+    if(!produto)produto=getTag(infCte,"xProd");
     if(!produto)produto="NÃO INFORMADO";
 
     const cpkg=peso>0?frete/peso:0;
 
-    return{chave,nCTe,emissao,frete,peso,cpkg,
+    return{
+      chave,nCTe,emissao,frete,peso,cpkg,
       transpNome:transpNome||"N/I",transpCnpj,
       destNome:destNome||"N/I",destCnpj,
-      origUF:origUF||"",destUF:destUFf||destUF||"",
-      produto:produto.toUpperCase().substring(0,40),
-      fname};
-  }catch(e){console.warn("parseCTe error:",e);return null;}
+      origUF:UFIni||"",destUF:UFFim||UFIni||"",
+      produto:produto.toUpperCase().trim().substring(0,40),
+      fname
+    };
+  }catch(e){console.warn("parseCTe error:",fname,e);return null;}
 }
 
 // ── FILE HANDLING ──────────────────────────────────────
@@ -848,9 +877,10 @@ async function handleFiles(files){
 
   const existing=new Set(allCTes.map(c=>c.chave));
   const novos=[];
+  let duplicados=0,invalidos=0;
   results.forEach(r=>{
-    if(!r){skip++;return;}
-    if(existing.has(r.chave)){skip++;return;}
+    if(!r){invalidos++;return;}
+    if(existing.has(r.chave)){duplicados++;return;}
     novos.push(r);added++;
   });
 
@@ -867,7 +897,7 @@ async function handleFiles(files){
     document.getElementById("upload-zone").style.display="none";
     updateTopbar();
     renderAll(getView());
-    toast("✓ +"+added+" CT-es | "+skip+" ignorados | "+allCTes.length+" total",5000);
+    toast("✓ +"+added+" CT-es importados | "+duplicados+" duplicados | "+invalidos+" inválidos | "+allCTes.length+" total",6000);
   },300);
 }
 
