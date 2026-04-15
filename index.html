@@ -681,16 +681,23 @@ import{getFirestore,collection,doc,setDoc,getDocs,deleteDoc,writeBatch}from"http
 const cfg={apiKey:"AIzaSyCofRClTS77tjLqo_R2m-9VIrgxHI02ojI",authDomain:"indicador-frete-be8.firebaseapp.com",projectId:"indicador-frete-be8",storageBucket:"indicador-frete-be8.firebasestorage.app",messagingSenderId:"787823147349",appId:"1:787823147349:web:e45f05e2dde93aa1e4d7dc"};
 try{
   const app=initializeApp(cfg);const db=getFirestore(app);
-  window.fbSave=async c=>{try{await setDoc(doc(db,"ctes",c.chaveCte),c);return true}catch(e){return false}};
-  window.fbLoad=async()=>{try{const s=await getDocs(collection(db,"ctes"));const r=[];s.forEach(d=>r.push(d.data()));return r}catch(e){return[]}};
+
+  // ── Expor funções globais ──
+  window.fbSave=async c=>{
+    try{await setDoc(doc(db,"ctes",c.chaveCte),c);return true;}catch(e){console.error("fbSave:",e);return false;}
+  };
+
+  window.fbLoad=async()=>{
+    try{const s=await getDocs(collection(db,"ctes"));const r=[];s.forEach(d=>r.push(d.data()));return r;}
+    catch(e){console.error("fbLoad:",e);return[];}
+  };
+
   window.fbClear=async(onProgress)=>{
     try{
       const s=await getDocs(collection(db,"ctes"));
-      const docs=s.docs;
-      const total=docs.length;
+      const docs=s.docs;const total=docs.length;
       if(total===0){if(onProgress)onProgress(0,0);return true;}
-      let deleted=0;
-      const BATCH_SIZE=400;
+      let deleted=0;const BATCH_SIZE=400;
       for(let i=0;i<docs.length;i+=BATCH_SIZE){
         const batch=writeBatch(db);
         docs.slice(i,i+BATCH_SIZE).forEach(d=>batch.delete(doc(db,"ctes",d.id)));
@@ -699,17 +706,58 @@ try{
         if(onProgress)onProgress(deleted,total);
       }
       return true;
-    }catch(e){console.error("fbClear error:",e);return false;}
+    }catch(e){console.error("fbClear:",e);return false;}
   };
+
+  // ── Status visual ──
   document.getElementById("fb-dot").classList.add("on");
   document.getElementById("fb-lbl").textContent="Firebase OK";
-  addLog("Firebase Firestore conectado.","ok");
-  fbLoad().then(ctes=>{if(ctes.length>0){ctes.forEach(c=>{if(!window.ALL.find(x=>x.chaveCte===c.chaveCte))window.ALL.push(c)});addLog("Firebase: "+ctes.length+" CT-es carregados.","ok");refresh()}});
+
+  // ── Carregar dados do Firebase com espera das funções do script regular ──
+  // SOLUÇÃO DO RACE CONDITION: esperar até window.repad estar disponível
+  // antes de processar os documentos carregados
+  function waitReady(fn, tries){
+    tries = tries || 0;
+    if(typeof window.repad === "function" && typeof window.normalizeCTE === "function" && typeof window.addLog === "function"){
+      fn();
+    } else if(tries < 100){
+      // Tentar a cada 50ms por até 5 segundos
+      setTimeout(function(){ waitReady(fn, tries+1); }, 50);
+    } else {
+      console.warn("Timeout: funções não ficaram prontas após 5s");
+    }
+  }
+
+  waitReady(function(){
+    window.addLog("Firebase Firestore conectado.","ok");
+    window.fbLoad().then(function(ctes){
+      if(!ctes || !ctes.length){
+        window.addLog("Firebase: nenhum CT-e salvo ainda.","info");
+        return;
+      }
+      var added=0;
+      ctes.forEach(function(c){
+        var norm=window.normalizeCTE(c);
+        if(!window.ALL.find(function(x){return x.chaveCte===norm.chaveCte;})){
+          window.ALL.push(norm);
+          added++;
+        }
+      });
+      window.addLog("Firebase: "+added+" CT-es carregados ("+ctes.length+" total).","ok");
+      if(added>0 && typeof window.repad==="function") window.repad();
+      else if(added>0 && typeof window.refresh==="function") window.refresh();
+    }).catch(function(e){
+      window.addLog("Erro ao carregar Firebase: "+e.message,"err");
+    });
+  });
+
 }catch(e){
   document.getElementById("fb-dot").classList.add("err");
   document.getElementById("fb-lbl").textContent="Offline";
-  window.fbSave=async()=>false;window.fbLoad=async()=>[];window.fbClear=async()=>true;
-  addLog("Firebase offline.","warn");
+  window.fbSave=async()=>false;
+  window.fbLoad=async()=>[];
+  window.fbClear=async()=>true;
+  if(typeof window.addLog==="function") window.addLog("Firebase offline: "+e.message,"warn");
 }
 </script>
 
@@ -736,7 +784,47 @@ let fLookup = {...FL};
 /* ══════════════════════════════════════════════
    STATE
 ══════════════════════════════════════════════ */
+// CNPJ utils — definidos antes de window.ALL para garantir hoisting
+function cleanCNPJ(v){ return String(v||"").replace(/[^0-9]/g,""); }
+function cnpjRaiz(v){ return cleanCNPJ(v).slice(0,8).padStart(8,"0"); }
+
 window.ALL = [];
+
+// ── Expor funções críticas imediatamente para o módulo Firebase ──
+// Isso resolve o race condition entre <script type="module"> e <script> regular
+// As funções são hoisted (function declarations), então já existem aqui
+window.addLog = function(msg, type){
+  var b=document.getElementById("log");
+  if(!b) return;
+  var cls={ok:"lo",warn:"lw",err:"le",info:"li"}[type]||"li";
+  var ts=new Date().toLocaleTimeString("pt-BR");
+  b.innerHTML+='<div class="'+cls+'">['+ts+'] '+msg+'</div>';
+  b.scrollTop=b.scrollHeight;
+};
+window.normalizeCTE = function(c){
+  var vFrete=c.vFrete||0,vMerc=c.vMerc||c.vMercadoria||0,peso=c.peso||0;
+  var pct=vMerc>0?vFrete/vMerc*100:(c.pct||c.pctFrete||0);
+  var rkg=peso>0?vFrete/peso:(c.rkg||c.rPorKg||0);
+  return Object.assign({},c,{vMerc:vMerc,pct:pct,rkg:rkg,
+    tr_orig:c.tr_orig||"",tr_pad:c.tr_pad||"",
+    tr_raiz:c.tr_raiz||"",tr_ok:c.tr_ok||false,
+    fo_orig:c.fo_orig||"",fo_pad:c.fo_pad||"",fo_matr:c.fo_matr||"",
+    cnpjRem:c.cnpjRem||c.cnpjForn||"",cnpjTom:c.cnpjTom||c.cnpjDest||"",
+    dest_orig:c.dest_orig||"",
+    tipo_op:c.tipo_op||"OUTROS",
+    fil_ori:c.fil_ori||"",fil_dest:c.fil_dest||"",
+    prod:c.prod||"Não informado",
+    rota:c.rota||((c.munIni||"")+"/"+(c.ufIni||"")+" → "+(c.munFim||"")+"/"+(c.ufFim||"")),
+  });
+};
+window.repad = function(){
+  // Stub — será sobrescrito pela definição completa abaixo
+  // mas já existe para o Firebase não falhar ao chamar waitReady
+  if(typeof repad === "function") { repad(); } else { if(typeof window.refresh==="function") window.refresh(); }
+};
+window.refresh = function(){
+  if(typeof refresh === "function") refresh();
+};
 let FIL = [];
 let page = 1, RPP = 20;
 let sortF = "dhEmi", sortD = "desc";
@@ -747,8 +835,7 @@ const OP_C = {VENDA:"rgba(0,208,132,.85)",COMPRA:"rgba(0,163,255,.85)",TRANSFERE
 /* ══════════════════════════════════════════════
    CNPJ UTILS
 ══════════════════════════════════════════════ */
-const cleanCNPJ = v => String(v||"").replace(/\D/g,"");
-const cnpjRaiz  = v => cleanCNPJ(v).slice(0,8).padStart(8,"0");
+
 
 /* ══════════════════════════════════════════════
    PADRONIZAÇÃO
