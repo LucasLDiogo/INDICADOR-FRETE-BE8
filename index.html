@@ -684,7 +684,17 @@ try{
 
   // ── Expor funções globais ──
   window.fbSave=async c=>{
-    try{await setDoc(doc(db,"ctes",c.chaveCte),c);return true;}catch(e){console.error("fbSave:",e);return false;}
+    try{
+      // Sanitizar: remover campos undefined/null que o Firestore não aceita
+      const safe={};
+      Object.keys(c).forEach(k=>{
+        const v=c[k];
+        if(v!==undefined && v!==null) safe[k]=v;
+        else safe[k]=""; // substituir undefined por string vazia
+      });
+      await setDoc(doc(db,"ctes",safe.chaveCte),safe);
+      return true;
+    }catch(e){console.error("fbSave:",e.message,e.code);return false;}
   };
 
   window.fbLoad=async()=>{
@@ -805,17 +815,30 @@ window.normalizeCTE = function(c){
   var vFrete=c.vFrete||0,vMerc=c.vMerc||c.vMercadoria||0,peso=c.peso||0;
   var pct=vMerc>0?vFrete/vMerc*100:(c.pct||c.pctFrete||0);
   var rkg=peso>0?vFrete/peso:(c.rkg||c.rPorKg||0);
-  return Object.assign({},c,{vMerc:vMerc,pct:pct,rkg:rkg,
+  // Recalcular tipo_op com a nova regra
+  var remCNPJ=c.cnpjRem||c.cnpjForn||"";
+  var tomCNPJ=c.cnpjTom||c.cnpjDest||"";
+  var tipo_op=c.tipo_op||"OUTROS";
+  if(typeof classOp==="function") tipo_op=classOp(remCNPJ,tomCNPJ);
+  var result=Object.assign({},c,{
+    vMerc:vMerc,pct:pct,rkg:rkg,tipo_op:tipo_op,
     tr_orig:c.tr_orig||"",tr_pad:c.tr_pad||"",
     tr_raiz:c.tr_raiz||"",tr_ok:c.tr_ok||false,
     fo_orig:c.fo_orig||"",fo_pad:c.fo_pad||"",fo_matr:c.fo_matr||"",
-    cnpjRem:c.cnpjRem||c.cnpjForn||"",cnpjTom:c.cnpjTom||c.cnpjDest||"",
-    dest_orig:c.dest_orig||"",
-    tipo_op:c.tipo_op||"OUTROS",
+    st_rem:c.st_rem||"",st_tom:c.st_tom||"",
+    cnpjRem:remCNPJ,cnpjTom:tomCNPJ,
+    dest_orig:c.dest_orig||"",destinatario:c.destinatario||"",
     fil_ori:c.fil_ori||"",fil_dest:c.fil_dest||"",
     prod:c.prod||"Não informado",
     rota:c.rota||((c.munIni||"")+"/"+(c.ufIni||"")+" → "+(c.munFim||"")+"/"+(c.ufFim||"")),
+    munIni:c.munIni||"",ufIni:c.ufIni||"",munFim:c.munFim||"",ufFim:c.ufFim||"",
+    mesNum:c.mesNum||"",trimestre:c.trimestre||"",ano:c.ano||"",
+    nCT:c.nCT||"",dhEmi:c.dhEmi||"",chaveCte:c.chaveCte||"",
+    cnpjTr:c.cnpjTr||"",
   });
+  // Garantir que nenhum campo seja undefined
+  Object.keys(result).forEach(function(k){ if(result[k]===undefined||result[k]===null) result[k]=""; });
+  return result;
 };
 window.repad = function(){
   // Stub — será sobrescrito pela definição completa abaixo
@@ -956,8 +979,8 @@ function repad(){
     const rem=padFO(c.cnpjRem, c.fo_orig);
     const tom=padFO(c.cnpjTom, c.dest_orig);
     const op=classOp(c.cnpjRem||c.cnpjForn||"", c.cnpjTom||c.cnpjDest||"");
-    return{...c,tr_pad:tr.nome,tr_ok:tr.ok,fo_pad:rem.nome,st_rem:rem.status,st_tom:tom.status,
-      tipo_op:op,fil_ori:rem.status==="FILIAL"?rem.nome:"",fil_dest:tom.status==="FILIAL"?tom.nome:""};
+    return{...c,tr_pad:tr.nome,tr_ok:tr.ok,fo_pad:rem.nome,st_rem:"",st_tom:"",
+      tipo_op:op,fil_ori:isFilialBe8(rem.raiz)?rem.nome:"",fil_dest:isFilialBe8(tom.raiz)?tom.nome:""};
   });
   addLog("Repadronização: "+window.ALL.length+" CT-es atualizados.","ok");
   refresh();
@@ -1047,12 +1070,12 @@ function parseXML(txt){
       chaveCte,nCT,dhEmi,mesNum,trimestre,ano:d.getFullYear().toString(),
       munIni,ufIni,munFim,ufFim,rota,
       tr_orig,cnpjTr,tr_pad:trI.nome,tr_raiz:trI.raiz,tr_ok:trI.ok,
-      fo_orig,cnpjRem,fo_pad:reI.nome,st_rem:reI.status,fo_matr:reI.matr,
-      dest_orig,cnpjTom,destinatario:tomI.nome,st_tom:tomI.status,
+      fo_orig,cnpjRem,fo_pad:reI.nome,st_rem:"",fo_matr:reI.raiz||"",
+      dest_orig,cnpjTom,destinatario:tomI.nome,st_tom:"",
       cidadeDest:de?g("xMun",de):"",ufDest:de?g("UF",de):"",
       vFrete,vMerc,peso,prod,pct,rkg,tipo_op,
-      fil_ori:reI.status==="FILIAL"?reI.nome:"",
-      fil_dest:tomI.status==="FILIAL"?tomI.nome:"",
+      fil_ori:isFilialBe8(cnpjRem)?reI.nome:"",
+      fil_dest:isFilialBe8(cnpjTom)?tomI.nome:"",
     };
   }catch(e){console.error(e);return null;}
 }
@@ -1084,12 +1107,12 @@ function loadDemoData(){
       mesNum:mes,trimestre:"T"+Math.ceil((dObj.getMonth()+1)/3)+"/"+dObj.getFullYear(),ano:dObj.getFullYear().toString(),
       munIni:or[0],ufIni:or[1],munFim:de[0],ufFim:de[1],rota:or[0]+"/"+or[1]+" → "+de[0]+"/"+de[1],
       tr_orig:tr[0],cnpjTr:tr[1],tr_pad:trI.nome,tr_raiz:trI.raiz,tr_ok:trI.ok,
-      fo_orig:fo[0],cnpjRem:fo[0],fo_pad:remI.nome,st_rem:remI.status,fo_matr:remI.matr,
-      dest_orig:"DESTINO",cnpjTom:tomCNPJ,destinatario:tomI.nome,st_tom:tomI.status,
+      fo_orig:fo[0],cnpjRem:fo[0],fo_pad:remI.nome,st_rem:"",fo_matr:remI.raiz||"",
+      dest_orig:"DESTINO",cnpjTom:tomCNPJ,destinatario:tomI.nome,st_tom:"",
       cidadeDest:de[0],ufDest:de[1],
       vFrete:parseFloat(vFrete.toFixed(2)),vMerc:parseFloat(vMerc.toFixed(2)),peso:Math.round(peso),
       prod:PRODS[i%PRODS.length],pct:vFrete/vMerc*100,rkg:vFrete/peso,tipo_op:op,
-      fil_ori:remI.status==="FILIAL"?remI.nome:"",fil_dest:tomI.status==="FILIAL"?tomI.nome:"",
+      fil_ori:""==="FILIAL"?remI.nome:"",fil_dest:""==="FILIAL"?tomI.nome:"",
     });
     added++;
   }
@@ -1837,10 +1860,10 @@ window.repad = function(){
     var rkg=peso>0?vFrete/peso:0;
     return Object.assign({},c,{
       tr_pad:trI.nome,tr_ok:trI.ok,tr_raiz:trI.raiz,
-      fo_pad:remI.nome,st_rem:remI.status,fo_matr:remI.matr,
-      st_tom:tomI.status,tipo_op:op,vMerc:vMerc,pct:pct,rkg:rkg,
-      fil_ori:remI.status==="FILIAL"?remI.nome:(c.fil_ori||""),
-      fil_dest:tomI.status==="FILIAL"?tomI.nome:(c.fil_dest||""),
+      fo_pad:remI.nome,st_rem:"",fo_matr:remI.raiz||"",
+      st_tom:"",tipo_op:op,vMerc:vMerc,pct:pct,rkg:rkg,
+      fil_ori:""==="FILIAL"?remI.nome:(c.fil_ori||""),
+      fil_dest:""==="FILIAL"?tomI.nome:(c.fil_dest||""),
     });
   });
   addLog("Repadronizacao: "+window.ALL.length+" CT-es atualizados.","ok");
