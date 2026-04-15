@@ -754,8 +754,13 @@ try{
         }
       });
       window.addLog("Firebase: "+added+" CT-es carregados ("+ctes.length+" total).","ok");
-      if(added>0 && typeof window.repad==="function") window.repad();
-      else if(added>0 && typeof window.refresh==="function") window.refresh();
+      if(added>0){
+        // setTimeout 0 garante call stack limpo antes de processar
+        setTimeout(function(){
+          if(typeof window.repad==="function") window.repad();
+          else if(typeof window.refresh==="function") window.refresh();
+        }, 0);
+      }
     }).catch(function(e){
       window.addLog("Erro ao carregar Firebase: "+e.message,"err");
     });
@@ -840,14 +845,10 @@ window.normalizeCTE = function(c){
   Object.keys(result).forEach(function(k){ if(result[k]===undefined||result[k]===null) result[k]=""; });
   return result;
 };
-window.repad = function(){
-  // Stub — será sobrescrito pela definição completa abaixo
-  // mas já existe para o Firebase não falhar ao chamar waitReady
-  if(typeof repad === "function") { repad(); } else { if(typeof window.refresh==="function") window.refresh(); }
-};
-window.refresh = function(){
-  if(typeof refresh === "function") refresh();
-};
+// Stubs — apenas para waitReady() detectar que as funções existem
+// Serão sobrescritos pelas definições reais abaixo no script
+window.repad   = function(){ /* stub — sobrescrito abaixo */ };
+window.refresh = function(){ /* stub — sobrescrito abaixo */ };
 let FIL = [];
 let page = 1, RPP = 20;
 let sortF = "dhEmi", sortD = "desc";
@@ -974,17 +975,33 @@ function normalizeCTE(c){
 window.normalizeCTE = normalizeCTE;
 
 function repad(){
-  window.ALL=window.ALL.map(c=>{
-    const tr=padTR(c.tr_raiz||c.cnpjTr, c.tr_orig);
-    const rem=padFO(c.cnpjRem, c.fo_orig);
-    const tom=padFO(c.cnpjTom, c.dest_orig);
-    const op=classOp(c.cnpjRem||c.cnpjForn||"", c.cnpjTom||c.cnpjDest||"");
-    return{...c,tr_pad:tr.nome,tr_ok:tr.ok,fo_pad:rem.nome,st_rem:"",st_tom:"",
-      tipo_op:op,fil_ori:isFilialBe8(rem.raiz)?rem.nome:"",fil_dest:isFilialBe8(tom.raiz)?tom.nome:""};
+  window.ALL=window.ALL.map(function(c){
+    var cnpjRem_=c.cnpjRem||c.cnpjForn||"";
+    var cnpjTom_=c.cnpjTom||c.cnpjDest||"";
+    var tr=padTR(c.tr_raiz||c.cnpjTr||"", c.tr_orig||"");
+    var rem=padFO(cnpjRem_, c.fo_orig||"");
+    var tom=padFO(cnpjTom_, c.dest_orig||"");
+    var op=classOp(cnpjRem_, cnpjTom_);
+    var vMerc=c.vMerc||c.vMercadoria||0;
+    var vFrete=c.vFrete||0;
+    var peso=c.peso||0;
+    var pct=vMerc>0?vFrete/vMerc*100:(c.pct||0);
+    var rkg=peso>0?vFrete/peso:(c.rkg||0);
+    return Object.assign({},c,{
+      tr_pad:tr.nome||"", tr_ok:!!tr.ok, tr_raiz:tr.raiz||c.tr_raiz||"",
+      fo_pad:rem.nome||"", st_rem:"", fo_matr:rem.raiz||c.fo_matr||"",
+      st_tom:"", tipo_op:op,
+      vMerc:vMerc, pct:pct, rkg:rkg,
+      fil_ori:isFilialBe8(cnpjRem_)?rem.nome:(c.fil_ori||""),
+      fil_dest:isFilialBe8(cnpjTom_)?tom.nome:(c.fil_dest||""),
+    });
   });
   addLog("Repadronização: "+window.ALL.length+" CT-es atualizados.","ok");
-  refresh();
+  setTimeout(function(){ refresh(); }, 0);
 }
+// Expor globalmente
+window.repad   = repad;
+window.refresh = refresh;
 
 /* ══════════════════════════════════════════════
    DRAG DROP XML
@@ -1165,13 +1182,22 @@ function refresh(){
   if(!window.ALL.length){
     document.getElementById("dash").style.display="none";
     document.getElementById("es").style.display="block";
-    document.getElementById("cte-ctr").textContent="0 CT-es";return;
+    document.getElementById("cte-ctr").textContent="0 CT-es";
+    document.getElementById("imp-count").textContent="0";
+    return;
   }
   document.getElementById("dash").style.display="block";
   document.getElementById("es").style.display="none";
   document.getElementById("cte-ctr").textContent=window.ALL.length+" CT-es";
-  populateFilters();FIL=[...window.ALL];renderDash(FIL);
+  document.getElementById("imp-count").textContent=window.ALL.length;
+  populateFilters();
+  FIL=[...window.ALL];
+  // setTimeout 0 libera a call stack antes de renderizar
+  // evita "Maximum call stack size exceeded" com grandes volumes de dados
+  setTimeout(function(){ renderDash(FIL); }, 0);
 }
+// Expor refresh globalmente
+window.refresh = refresh;
 window.refresh=refresh;
 
 /* ══════════════════════════════════════════════
@@ -1847,28 +1873,8 @@ function sortPerf(tableId,colIdx){
 window.DEMO_TOOLTIP="Carrega 63 CT-es simulados com múltiplas transportadoras, fornecedores, filiais e tipos de operação (VENDA, COMPRA, TRANSFERÊNCIA) para testar todas as funcionalidades sem precisar de arquivos reais. Os dados cobrem 7 meses com variações realistas de frete e mercadoria.";
 
 /* ════ EXPOSE GLOBALS ════ */
-window.repad = function(){
-  window.ALL=window.ALL.map(function(c){
-    var trI=padTR(c.tr_raiz||c.cnpjTr||c.cnpjTransp||"",c.tr_orig||c.tr_pad||"");
-    var remI=padFO(c.cnpjRem||c.cnpjForn||"",c.fo_orig||c.fo_pad||"");
-    var tomI=padFO(c.cnpjTom||c.cnpjDest||"",c.dest_orig||"");
-    var op=classOp(c.cnpjRem||c.cnpjForn||"", c.cnpjTom||c.cnpjDest||"");
-    var vMerc=c.vMerc||c.vMercadoria||0;
-    var vFrete=c.vFrete||0;
-    var peso=c.peso||0;
-    var pct=vMerc>0?vFrete/vMerc*100:0;
-    var rkg=peso>0?vFrete/peso:0;
-    return Object.assign({},c,{
-      tr_pad:trI.nome,tr_ok:trI.ok,tr_raiz:trI.raiz,
-      fo_pad:remI.nome,st_rem:"",fo_matr:remI.raiz||"",
-      st_tom:"",tipo_op:op,vMerc:vMerc,pct:pct,rkg:rkg,
-      fil_ori:""==="FILIAL"?remI.nome:(c.fil_ori||""),
-      fil_dest:""==="FILIAL"?tomI.nome:(c.fil_dest||""),
-    });
-  });
-  addLog("Repadronizacao: "+window.ALL.length+" CT-es atualizados.","ok");
-  refresh();
-};
+// window.repad já exposto acima pela function declaration
+
 
 
 /* ════════════════════════════════════════════════════════
