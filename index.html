@@ -728,13 +728,17 @@ try{
   // antes de processar os documentos carregados
   function waitReady(fn, tries){
     tries = tries || 0;
-    if(typeof window.repad === "function" && typeof window.normalizeCTE === "function" && typeof window.addLog === "function"){
+    // Verificar função repad real (function declaration = hoisted, sempre disponível)
+    // NÃO verificar window.repad pois pode ser stub vazio
+    var repadOk  = typeof repad === "function" && repad.toString().length > 50;
+    var normOk   = typeof normalizeCTE === "function";
+    var logOk    = typeof addLog === "function";
+    if(repadOk && normOk && logOk){
       fn();
     } else if(tries < 100){
-      // Tentar a cada 50ms por até 5 segundos
       setTimeout(function(){ waitReady(fn, tries+1); }, 50);
     } else {
-      console.warn("Timeout: funções não ficaram prontas após 5s");
+      console.warn("Timeout: funções core não disponíveis após 5s");
     }
   }
 
@@ -755,10 +759,13 @@ try{
       });
       window.addLog("Firebase: "+added+" CT-es carregados ("+ctes.length+" total).","ok");
       if(added>0){
-        // setTimeout 0 garante call stack limpo antes de processar
+        // Chamar repad() diretamente (function declaration hoisted, sempre real)
+        // Usar setTimeout para liberar call stack antes do processamento
         setTimeout(function(){
-          if(typeof window.repad==="function") window.repad();
-          else if(typeof window.refresh==="function") window.refresh();
+          try { repad(); } catch(e){
+            console.error("repad error:", e.message);
+            try { refresh(); } catch(e2){ console.error("refresh error:", e2.message); }
+          }
         }, 0);
       }
     }).catch(function(e){
@@ -845,10 +852,7 @@ window.normalizeCTE = function(c){
   Object.keys(result).forEach(function(k){ if(result[k]===undefined||result[k]===null) result[k]=""; });
   return result;
 };
-// Stubs — apenas para waitReady() detectar que as funções existem
-// Serão sobrescritos pelas definições reais abaixo no script
-window.repad   = function(){ /* stub — sobrescrito abaixo */ };
-window.refresh = function(){ /* stub — sobrescrito abaixo */ };
+// window.repad e window.refresh são expostos após definição (linha ~1003)
 let FIL = [];
 let page = 1, RPP = 20;
 let sortF = "dhEmi", sortD = "desc";
