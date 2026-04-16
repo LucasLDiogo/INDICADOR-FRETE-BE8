@@ -78,11 +78,56 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellips
 .pb-l{font-size:11px;color:var(--text2);margin-top:4px;font-family:"JetBrains Mono",monospace}
 /* FILTER */
 .fil-w{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:16px}
-.fil-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;align-items:end}
-.fl{display:flex;flex-direction:column;gap:3px}
+.fil-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;align-items:end}
+.fl{display:flex;flex-direction:column;gap:3px;position:relative}
 .fl-lbl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text2)}
 .fsel{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 9px;color:var(--text0);font-family:"Sora",sans-serif;font-size:11px;outline:none;cursor:pointer;width:100%}
 .fsel:focus{border-color:var(--acc2)}
+/* MULTI-SELECT */
+.ms{position:relative;width:100%}
+.ms-trig{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:6px 26px 6px 9px;color:var(--text0);font-family:"Sora",sans-serif;font-size:11px;
+  cursor:pointer;min-height:28px;display:flex;align-items:center;flex-wrap:wrap;gap:3px;
+  transition:border-color .15s;position:relative}
+.ms-trig:hover{border-color:var(--acc2)}
+.ms-trig.open{border-color:var(--acc1)}
+.ms-trig::after{content:"▾";position:absolute;right:9px;top:50%;transform:translateY(-50%);
+  color:var(--text2);font-size:9px;pointer-events:none}
+.ms-trig.open::after{transform:translateY(-50%) rotate(180deg);color:var(--acc1)}
+.ms-ph{color:var(--text3);font-size:11px}
+.ms-chip{display:inline-flex;align-items:center;gap:3px;background:rgba(0,163,255,.15);
+  border:1px solid rgba(0,163,255,.4);border-radius:10px;padding:1px 6px;font-size:9px;
+  font-weight:600;color:var(--acc2);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ms-chip-more{background:rgba(0,208,132,.15);border:1px solid rgba(0,208,132,.4);
+  border-radius:10px;padding:1px 6px;font-size:9px;font-weight:700;color:var(--acc1)}
+.ms-dd{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:50;
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  box-shadow:0 8px 24px rgba(0,0,0,.6);max-height:280px;overflow:hidden;
+  display:flex;flex-direction:column}
+.ms.open .ms-dd{display:flex}
+.ms:not(.open) .ms-dd{display:none}
+.ms-search{background:var(--bg3);border:none;border-bottom:1px solid var(--border);
+  padding:7px 10px;color:var(--text0);font-family:"Sora",sans-serif;font-size:11px;
+  outline:none;width:100%}
+.ms-search::placeholder{color:var(--text3)}
+.ms-actions{display:flex;gap:4px;padding:6px;border-bottom:1px solid var(--border2);
+  background:var(--bg1)}
+.ms-act-btn{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:4px;
+  color:var(--text1);padding:3px 6px;cursor:pointer;font-family:"Sora",sans-serif;
+  font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;transition:all .15s}
+.ms-act-btn:hover{border-color:var(--acc1);color:var(--acc1)}
+.ms-list{overflow-y:auto;flex:1;padding:4px 0;min-height:60px;max-height:200px}
+.ms-opt{display:flex;align-items:center;gap:7px;padding:5px 10px;cursor:pointer;
+  font-size:11px;color:var(--text1);transition:background .12s}
+.ms-opt:hover{background:var(--bg3)}
+.ms-opt.sel{background:rgba(0,208,132,.08);color:var(--text0)}
+.ms-opt.sel:hover{background:rgba(0,208,132,.15)}
+.ms-cb{width:13px;height:13px;border:1.5px solid var(--text3);border-radius:3px;
+  display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s}
+.ms-opt.sel .ms-cb{background:var(--acc1);border-color:var(--acc1)}
+.ms-opt.sel .ms-cb::after{content:"✓";color:#001a0f;font-size:10px;font-weight:900}
+.ms-opt-lbl{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ms-empty{padding:12px;text-align:center;color:var(--text3);font-size:11px}
 /* OP PILLS */
 .op-pills{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
 .op-pill{display:flex;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;color:var(--text1)}
@@ -385,35 +430,22 @@ body::before{background:
   <!-- DASHBOARD -->
   <div id="dash" style="display:none">
 
-    <!-- FILTERS -->
+    <!-- FILTERS (multi-select com busca) -->
     <div class="sh" style="margin-top:22px"><div class="st">Filtros</div><button class="btn btn-s" onclick="clearFilters()">✕ Limpar</button></div>
     <div class="fil-w">
       <div class="fil-g">
-        <div class="fl"><div class="fl-lbl">Ano</div>
-          <select class="fsel" id="f-ano" onchange="applyFilters()">
-            <option value="">Todos</option>
-            <option value="2025">2025</option>
-            <option value="2026">2026</option>
-          </select></div>
-        <div class="fl"><div class="fl-lbl">Mês</div><select class="fsel" id="f-mes" onchange="applyFilters()"><option value="">Todos</option></select></div>
-        <div class="fl"><div class="fl-lbl">Trimestre</div><select class="fsel" id="f-tri" onchange="applyFilters()"><option value="">Todos</option></select></div>
-        <div class="fl"><div class="fl-lbl">Tipo Operação</div>
-          <select class="fsel" id="f-op" onchange="applyFilters()">
-            <option value="">Todos</option>
-            <option value="VENDA">VENDA</option>
-            <option value="COMPRA">COMPRA</option>
-            <option value="TRANSFERENCIA">TRANSFERÊNCIA</option>
-            <option value="OUTROS">OUTROS</option>
-          </select></div>
-        
-        <div class="fl"><div class="fl-lbl">Transportadora</div><select class="fsel" id="f-tr" onchange="applyFilters()"><option value="">Todas</option></select></div>
-        <div class="fl"><div class="fl-lbl">Fornecedor</div><select class="fsel" id="f-fo" onchange="applyFilters()"><option value="">Todos</option></select></div>
-        <div class="fl"><div class="fl-lbl">UF Destino</div><select class="fsel" id="f-uf" onchange="applyFilters()"><option value="">Todas</option></select></div>
-        <div class="fl"><div class="fl-lbl">Filial Origem</div><select class="fsel" id="f-fori" onchange="applyFilters()"><option value="">Todas</option></select></div>
-        <div class="fl"><div class="fl-lbl">Filial Destino</div><select class="fsel" id="f-fdest" onchange="applyFilters()"><option value="">Todas</option></select></div>
-        <div class="fl"><div class="fl-lbl">Produto</div><select class="fsel" id="f-prod" onchange="applyFilters()"><option value="">Todos</option></select></div>
-        <div class="fl"><div class="fl-lbl">Origem</div><select class="fsel" id="f-ori" onchange="applyFilters()"><option value="">Todas</option></select></div>
-        <div class="fl"><div class="fl-lbl">Destino</div><select class="fsel" id="f-dest" onchange="applyFilters()"><option value="">Todos</option></select></div>
+        <div class="fl"><div class="fl-lbl">Ano</div><div id="f-ano" class="ms" data-key="ano"></div></div>
+        <div class="fl"><div class="fl-lbl">Mês</div><div id="f-mes" class="ms" data-key="mesNum"></div></div>
+        <div class="fl"><div class="fl-lbl">Trimestre</div><div id="f-tri" class="ms" data-key="trimestre"></div></div>
+        <div class="fl"><div class="fl-lbl">Tipo Operação</div><div id="f-op" class="ms" data-key="tipo_op"></div></div>
+        <div class="fl"><div class="fl-lbl">Transportadora</div><div id="f-tr" class="ms" data-key="tr_pad"></div></div>
+        <div class="fl"><div class="fl-lbl">Fornecedor</div><div id="f-fo" class="ms" data-key="fo_pad"></div></div>
+        <div class="fl"><div class="fl-lbl">UF Destino</div><div id="f-uf" class="ms" data-key="ufFim"></div></div>
+        <div class="fl"><div class="fl-lbl">Filial Origem</div><div id="f-fori" class="ms" data-key="fil_ori"></div></div>
+        <div class="fl"><div class="fl-lbl">Filial Destino</div><div id="f-fdest" class="ms" data-key="fil_dest"></div></div>
+        <div class="fl"><div class="fl-lbl">Produto</div><div id="f-prod" class="ms" data-key="prod"></div></div>
+        <div class="fl"><div class="fl-lbl">Origem</div><div id="f-ori" class="ms" data-key="munIni"></div></div>
+        <div class="fl"><div class="fl-lbl">Destino</div><div id="f-dest" class="ms" data-key="munFim"></div></div>
       </div>
     </div>
 
@@ -1427,53 +1459,196 @@ function loadDemoData(){
 }
 
 /* ══════════════════════════════════════════════
-   FILTERS
+   FILTERS — MULTI-SELECT COM BUSCA
+   ──────────────────────────────────────────────
+   Cada filtro (id="f-*") é um div.ms com opções que o usuário pode
+   selecionar/desselecionar livremente. Um campo de busca filtra as opções
+   visíveis. O estado de seleção fica em window.FSEL (map id → Set de valores).
 ══════════════════════════════════════════════ */
-function pop(id,vals){
-  const el=document.getElementById(id);const cur=el.value;
-  el.innerHTML="<option value=''>Todos</option>";
-  [...new Set(vals)].filter(Boolean).sort().forEach(v=>el.innerHTML+=`<option value="${v}">${v}</option>`);
-  if(cur) el.value=cur;
-}
-function populateFilters(){
-  const d=window.ALL;
-  // Anos detectados nos dados (preserva 2025 e 2026 mesmo sem dados)
-  const anosSet=new Set(["2025","2026"]);
-  d.forEach(c=>{ if(c.ano) anosSet.add(String(c.ano)); });
-  const elAno=document.getElementById("f-ano");
-  if(elAno){
-    const cur=elAno.value;
-    elAno.innerHTML="<option value=''>Todos</option>"+
-      [...anosSet].sort().map(a=>`<option value="${a}">${a}</option>`).join("");
-    if(cur) elAno.value=cur;
+window.FSEL = {
+  "f-ano":{}, "f-mes":{}, "f-tri":{}, "f-op":{},
+  "f-tr":{}, "f-fo":{}, "f-uf":{},
+  "f-fori":{}, "f-fdest":{}, "f-prod":{},
+  "f-ori":{}, "f-dest":{}
+};
+// Inicializa sets (sem repetir em cada chamada)
+Object.keys(window.FSEL).forEach(function(k){ window.FSEL[k] = new Set(); });
+// Labels dos filtros (para placeholder)
+const MS_LABELS = {
+  "f-ano":"ano","f-mes":"mês","f-tri":"trimestre","f-op":"operação",
+  "f-tr":"transportadora","f-fo":"fornecedor","f-uf":"UF",
+  "f-fori":"filial origem","f-fdest":"filial destino","f-prod":"produto",
+  "f-ori":"origem","f-dest":"destino"
+};
+// Opções disponíveis de cada filtro (preenchidas pelo populateFilters)
+window.FOPTS = {};
+
+function msRender(id){
+  const ms = document.getElementById(id);
+  if(!ms) return;
+  const key = ms.dataset.key;
+  const opts = (window.FOPTS[id] || []).slice();
+  const sel = window.FSEL[id];
+  const search = (ms.querySelector(".ms-search")?.value || "").toLowerCase().trim();
+  const visible = search ? opts.filter(function(v){ return String(v).toLowerCase().indexOf(search) >= 0; }) : opts;
+  // Trigger (chips de selecionados)
+  let trig = ms.querySelector(".ms-trig");
+  const label = MS_LABELS[id] || "itens";
+  let trigHtml;
+  if(!sel.size){
+    trigHtml = '<span class="ms-ph">Todos os '+label+'</span>';
+  } else {
+    const items = Array.from(sel);
+    const shown = items.slice(0,2);
+    const rest = items.length - shown.length;
+    trigHtml = shown.map(function(v){ return '<span class="ms-chip" title="'+String(v).replace(/"/g,'&quot;')+'">'+String(v)+'</span>'; }).join("");
+    if(rest>0) trigHtml += '<span class="ms-chip-more">+'+rest+'</span>';
   }
-  pop("f-mes",d.map(c=>c.mesNum));
-  pop("f-tri",d.map(c=>c.trimestre));
-  pop("f-tr",d.map(c=>c.tr_pad));
-  pop("f-fo",d.map(c=>c.fo_pad));
-  pop("f-uf",d.map(c=>c.ufFim));
-  pop("f-fori",d.filter(c=>c.fil_ori).map(c=>c.fil_ori));
-  pop("f-fdest",d.filter(c=>c.fil_dest).map(c=>c.fil_dest));
-  pop("f-prod",d.map(c=>c.prod));
-  pop("f-ori",d.map(c=>c.munIni));
-  pop("f-dest",d.map(c=>c.munFim));
+  if(trig) trig.innerHTML = trigHtml;
+  // Lista de opções
+  const list = ms.querySelector(".ms-list");
+  if(list){
+    if(!visible.length){
+      list.innerHTML = '<div class="ms-empty">'+(search?"Nenhum resultado":"Sem opções")+'</div>';
+    } else {
+      list.innerHTML = visible.map(function(v){
+        const isSel = sel.has(v);
+        const safe = String(v).replace(/"/g,'&quot;');
+        return '<div class="ms-opt'+(isSel?' sel':'')+'" data-v="'+safe+'" title="'+safe+'">'
+             + '<span class="ms-cb"></span><span class="ms-opt-lbl">'+String(v)+'</span></div>';
+      }).join("");
+    }
+  }
 }
-function gv(id){return document.getElementById(id)?.value||"";}
+
+function msBuild(id){
+  const ms = document.getElementById(id);
+  if(!ms || ms.dataset.built === "1") return;
+  ms.dataset.built = "1";
+  ms.innerHTML = ''
+    + '<div class="ms-trig"></div>'
+    + '<div class="ms-dd">'
+    +   '<input type="text" class="ms-search" placeholder="🔍 Buscar..." />'
+    +   '<div class="ms-actions">'
+    +     '<button type="button" class="ms-act-btn" data-act="all">Todos</button>'
+    +     '<button type="button" class="ms-act-btn" data-act="none">Nenhum</button>'
+    +   '</div>'
+    +   '<div class="ms-list"></div>'
+    + '</div>';
+  // Abrir/fechar ao clicar no trigger
+  ms.querySelector(".ms-trig").addEventListener("click", function(e){
+    e.stopPropagation();
+    const isOpen = ms.classList.contains("open");
+    // Fecha qualquer outro aberto
+    document.querySelectorAll(".ms.open").forEach(function(x){ x.classList.remove("open"); x.querySelector(".ms-trig")?.classList.remove("open"); });
+    if(!isOpen){
+      ms.classList.add("open");
+      ms.querySelector(".ms-trig").classList.add("open");
+      const searchEl = ms.querySelector(".ms-search");
+      if(searchEl){ searchEl.value=""; searchEl.focus(); }
+      msRender(id);
+    }
+  });
+  // Busca dinâmica
+  ms.querySelector(".ms-search").addEventListener("input", function(){ msRender(id); });
+  ms.querySelector(".ms-search").addEventListener("click", function(e){ e.stopPropagation(); });
+  // Clique em opção (toggle)
+  ms.querySelector(".ms-list").addEventListener("click", function(e){
+    e.stopPropagation();
+    const opt = e.target.closest(".ms-opt");
+    if(!opt) return;
+    const v = opt.dataset.v;
+    const sel = window.FSEL[id];
+    if(sel.has(v)) sel.delete(v); else sel.add(v);
+    msRender(id);
+    applyFilters();
+  });
+  // Botões Todos / Nenhum
+  ms.querySelectorAll(".ms-act-btn").forEach(function(btn){
+    btn.addEventListener("click", function(e){
+      e.stopPropagation();
+      const act = btn.dataset.act;
+      const sel = window.FSEL[id];
+      if(act === "all"){
+        // Seleciona apenas os VISÍVEIS (respeita filtro de busca)
+        const search = (ms.querySelector(".ms-search").value||"").toLowerCase().trim();
+        const opts = window.FOPTS[id] || [];
+        (search ? opts.filter(function(v){ return String(v).toLowerCase().indexOf(search)>=0; }) : opts)
+          .forEach(function(v){ sel.add(v); });
+      } else { sel.clear(); }
+      msRender(id);
+      applyFilters();
+    });
+  });
+}
+
+// Fecha dropdowns ao clicar fora
+document.addEventListener("click", function(e){
+  document.querySelectorAll(".ms.open").forEach(function(ms){
+    if(!ms.contains(e.target)){
+      ms.classList.remove("open");
+      ms.querySelector(".ms-trig")?.classList.remove("open");
+    }
+  });
+});
+
+function populateFilters(){
+  const d = window.ALL;
+  // Coleta valores únicos por filtro — preserva 2025/2026 sempre no filtro de Ano
+  const anos = new Set(["2025","2026"]); d.forEach(function(c){ if(c.ano) anos.add(String(c.ano)); });
+  window.FOPTS["f-ano"]   = [...anos].sort();
+  window.FOPTS["f-mes"]   = [...new Set(d.map(function(c){return c.mesNum;}).filter(Boolean))].sort();
+  window.FOPTS["f-tri"]   = [...new Set(d.map(function(c){return c.trimestre;}).filter(Boolean))].sort();
+  window.FOPTS["f-op"]    = ["VENDA","COMPRA","TRANSFERENCIA","OUTROS"];
+  window.FOPTS["f-tr"]    = [...new Set(d.map(function(c){return c.tr_pad;}).filter(Boolean))].sort();
+  window.FOPTS["f-fo"]    = [...new Set(d.map(function(c){return c.fo_pad;}).filter(Boolean))].sort();
+  window.FOPTS["f-uf"]    = [...new Set(d.map(function(c){return c.ufFim;}).filter(Boolean))].sort();
+  window.FOPTS["f-fori"]  = [...new Set(d.map(function(c){return c.fil_ori;}).filter(Boolean))].sort();
+  window.FOPTS["f-fdest"] = [...new Set(d.map(function(c){return c.fil_dest;}).filter(Boolean))].sort();
+  window.FOPTS["f-prod"]  = [...new Set(d.map(function(c){return c.prod;}).filter(Boolean))].sort();
+  window.FOPTS["f-ori"]   = [...new Set(d.map(function(c){return c.munIni;}).filter(Boolean))].sort();
+  window.FOPTS["f-dest"]  = [...new Set(d.map(function(c){return c.munFim;}).filter(Boolean))].sort();
+  // Constrói e renderiza cada filtro
+  Object.keys(window.FSEL).forEach(function(id){
+    msBuild(id);
+    // Remove seleções órfãs (valores que não existem mais nos dados)
+    const validSet = new Set(window.FOPTS[id] || []);
+    const sel = window.FSEL[id];
+    [...sel].forEach(function(v){ if(!validSet.has(v)) sel.delete(v); });
+    msRender(id);
+  });
+}
+
 function applyFilters(){
-  const ano=gv("f-ano"),mes=gv("f-mes"),tri=gv("f-tri"),op=gv("f-op"),tr=gv("f-tr"),fo=gv("f-fo"),uf=gv("f-uf"),fori=gv("f-fori"),fdest=gv("f-fdest"),prod=gv("f-prod"),ori=gv("f-ori"),dest=gv("f-dest");
-  FIL=window.ALL.filter(c=>
-    (!ano||String(c.ano)===ano)&&
-    (!mes||c.mesNum===mes)&&(!tri||c.trimestre===tri)&&(!op||c.tipo_op===op)&&
-    (!tr||c.tr_pad===tr)&&(!fo||c.fo_pad===fo)&&
-    (!uf||c.ufFim===uf)&&(!fori||c.fil_ori===fori)&&(!fdest||c.fil_dest===fdest)&&
-    (!prod||c.prod===prod)&&(!ori||c.munIni===ori)&&(!dest||c.munFim===dest)
-  );
-  page=1;
+  const S = window.FSEL;
+  // Um filtro vazio = aceita tudo; um filtro com N itens = aceita qualquer um deles (OR interno / AND entre filtros)
+  const match = function(c){
+    return (!S["f-ano"].size   || S["f-ano"].has(String(c.ano)))
+        && (!S["f-mes"].size   || S["f-mes"].has(c.mesNum))
+        && (!S["f-tri"].size   || S["f-tri"].has(c.trimestre))
+        && (!S["f-op"].size    || S["f-op"].has(c.tipo_op))
+        && (!S["f-tr"].size    || S["f-tr"].has(c.tr_pad))
+        && (!S["f-fo"].size    || S["f-fo"].has(c.fo_pad))
+        && (!S["f-uf"].size    || S["f-uf"].has(c.ufFim))
+        && (!S["f-fori"].size  || S["f-fori"].has(c.fil_ori))
+        && (!S["f-fdest"].size || S["f-fdest"].has(c.fil_dest))
+        && (!S["f-prod"].size  || S["f-prod"].has(c.prod))
+        && (!S["f-ori"].size   || S["f-ori"].has(c.munIni))
+        && (!S["f-dest"].size  || S["f-dest"].has(c.munFim));
+  };
+  FIL = window.ALL.filter(match);
+  page = 1;
   renderDash(FIL);
 }
+
 function clearFilters(){
-  ["f-ano","f-mes","f-tri","f-op","f-tr","f-fo","f-uf","f-fori","f-fdest","f-prod","f-ori","f-dest"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
-  FIL=[...window.ALL];page=1;renderDash(FIL);
+  Object.keys(window.FSEL).forEach(function(id){
+    window.FSEL[id].clear();
+    msRender(id);
+  });
+  FIL = [...window.ALL];
+  page = 1;
+  renderDash(FIL);
 }
 
 /* ══════════════════════════════════════════════
@@ -1569,7 +1744,8 @@ const DL_BAR_P={...DLH,formatter:function(v){if(v>=1e6)return(v/1e6).toFixed(1)+
 const DL_PCT={display:true,color:"#ffffff",font:{family:"Sora",size:9,weight:"800"},formatter:function(v){return (v||0).toFixed(2)+"%";},anchor:"end",align:"end",clamp:true};
 const SCALES={x:{ticks:{color:"#6098b8",font:{size:9}},grid:{color:"rgba(255,255,255,.04)"}},y:{ticks:{color:"#6098b8",font:{size:9}},grid:{color:"rgba(255,255,255,.04)"}}};
 const SCALES_H={x:{ticks:{color:"#6098b8",font:{size:9}},grid:{color:"rgba(255,255,255,.04)"}},y:{ticks:{color:"#ffffff",font:{size:9,weight:"600"}},grid:{color:"rgba(255,255,255,.04)"}}};
-const SCALES_LOG={x:{ticks:{color:"#6098b8",font:{size:9}},grid:{color:"rgba(255,255,255,.04)"}},y:{type:"logarithmic",ticks:{color:"#6098b8",font:{size:9},callback:function(v,i,vals){if(v===0)return"0";if(v>=1e6)return(v/1e6).toFixed(0)+"M";if(v>=1e3)return(v/1e3).toFixed(0)+"k";return v;}},grid:{color:"rgba(255,255,255,.04)"}}};
+// Escala logarítmica: min:1 evita gráfico em branco quando há zeros (log(0)=-∞)
+const SCALES_LOG={x:{ticks:{color:"#6098b8",font:{size:9}},grid:{color:"rgba(255,255,255,.04)"}},y:{type:"logarithmic",min:1,ticks:{color:"#6098b8",font:{size:9},callback:function(v,i,vals){if(v===0)return"0";if(v>=1e6)return(v/1e6).toFixed(0)+"M";if(v>=1e3)return(v/1e3).toFixed(0)+"k";return v;}},grid:{color:"rgba(255,255,255,.04)"}}};
 const SCALES_LOG_H={x:{type:"logarithmic",ticks:{color:"#6098b8",font:{size:9},callback:function(v,i,vals){if(v===0)return"0";if(v>=1e6)return(v/1e6).toFixed(0)+"M";if(v>=1e3)return(v/1e3).toFixed(0)+"k";return v;}},grid:{color:"rgba(255,255,255,.04)"}},y:{ticks:{color:"#ffffff",font:{size:9,weight:"600"}},grid:{color:"rgba(255,255,255,.04)"}}};
 
 function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
@@ -1605,13 +1781,25 @@ function renderCharts(data){
   mkBH("c-rkg-tr",trT.slice(0,8).map(([k])=>k.length>18?k.slice(0,16)+"…":k),[{label:"R$/kg",data:trT.slice(0,8).map(([,v])=>rA(v)),backgroundColor:"rgba(0,229,255,.7)",borderRadius:4}]);
   mkBH("c-fo-top",foT.slice(0,6).map(([k])=>k.length>18?k.slice(0,16)+"…":k),[{label:"Frete",data:foT.slice(0,6).map(([,v])=>fS(v)),backgroundColor:"rgba(126,255,160,.7)",borderRadius:4}]);
 
-  // Operação
+  // Operação — escala LOGARÍTMICA nos cards de valor (Frete, CT-es, Peso)
+  // e rótulos dentro da barra (anchor:end + align:start = topo interno) para evitar corte.
   const opD=ops.map(o=>(byOp[o]||[]));
-  mkB("c-op-fr",ops,[{label:"Frete",data:opD.map(fS),backgroundColor:ops.map(o=>OP_C[o]),borderRadius:6}],{useLog:false},{plugins:{legend:{display:false},datalabels:{display:true,color:"#ffffff",font:{size:10,weight:"800"},formatter:v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'k':v.toFixed(0),anchor:"end",align:"end",clamp:true}}});
-  mkB("c-op-ct",ops,[{label:"CT-es",data:opD.map(a=>a.length),backgroundColor:ops.map(o=>OP_C[o]),borderRadius:6}],{plugins:{legend:{display:false},datalabels:{display:true,color:"#ffffff",font:{size:10,weight:"800"},formatter:v=>String(v),anchor:"end",align:"end",clamp:true}}});
-  mkB("c-op-pe",ops,[{label:"Peso",data:opD.map(pS),backgroundColor:ops.map(o=>OP_C[o]),borderRadius:6}],{plugins:{legend:{display:false},datalabels:{display:true,color:"#ffffff",font:{size:10,weight:"800"},formatter:v=>v>=1e6?(v/1e6).toFixed(1)+'MT':v>=1e3?(v/1e3).toFixed(1)+'T':Math.round(v)+'kg',anchor:"end",align:"end",clamp:true}}});
-  mkB("c-op-pc",ops,[{label:"% Frete",data:opD.map(pA),backgroundColor:ops.map(o=>OP_C[o]),borderRadius:6}],{plugins:{legend:{display:false},datalabels:{display:true,color:"#ffffff",font:{size:11,weight:"800"},formatter:function(v){return (v||0).toFixed(2)+"%";},anchor:"end",align:"end",clamp:true}}});
-  mkB("c-op-rk",ops,[{label:"R$/kg",data:opD.map(rA),backgroundColor:ops.map(o=>OP_C[o]),borderRadius:6}],{plugins:{legend:{display:false},datalabels:{display:true,color:"#ffffff",font:{size:10,weight:"800"},formatter:v=>v.toFixed(4),anchor:"end",align:"end",clamp:true}}});
+  const DL_OP_VAL={display:true,color:"#ffffff",font:{size:10,weight:"800"},
+    anchor:"end",align:"start",offset:4,clamp:true};
+  mkB("c-op-fr",ops,[{label:"Frete",data:opD.map(fS),backgroundColor:ops.map(o=>OP_C[o]),borderRadius:6}],
+    {useLog:true,plugins:{legend:{display:false},datalabels:{...DL_OP_VAL,
+      formatter:v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'k':v.toFixed(0)}}});
+  mkB("c-op-ct",ops,[{label:"CT-es",data:opD.map(a=>a.length),backgroundColor:ops.map(o=>OP_C[o]),borderRadius:6}],
+    {useLog:true,plugins:{legend:{display:false},datalabels:{...DL_OP_VAL,formatter:v=>String(v)}}});
+  mkB("c-op-pe",ops,[{label:"Peso",data:opD.map(pS),backgroundColor:ops.map(o=>OP_C[o]),borderRadius:6}],
+    {useLog:true,plugins:{legend:{display:false},datalabels:{...DL_OP_VAL,
+      formatter:v=>v>=1e6?(v/1e6).toFixed(1)+'MT':v>=1e3?(v/1e3).toFixed(1)+'T':Math.round(v)+'kg'}}});
+  // % Frete e R$/kg continuam em escala linear (valores pequenos, log distorceria)
+  mkB("c-op-pc",ops,[{label:"% Frete",data:opD.map(pA),backgroundColor:ops.map(o=>OP_C[o]),borderRadius:6}],
+    {plugins:{legend:{display:false},datalabels:{...DL_OP_VAL,font:{size:11,weight:"800"},
+      formatter:function(v){return (v||0).toFixed(2)+"%";}}}});
+  mkB("c-op-rk",ops,[{label:"R$/kg",data:opD.map(rA),backgroundColor:ops.map(o=>OP_C[o]),borderRadius:6}],
+    {plugins:{legend:{display:false},datalabels:{...DL_OP_VAL,formatter:v=>v.toFixed(4)}}});
   mkL("c-op-me",mL,ops.map((op,i)=>({label:op,data:mK.map(m=>(byOp[op]||[]).filter(c=>c.mesNum===m).reduce((s,c)=>s+c.vFrete,0)),borderColor:COLS[i],backgroundColor:COLS[i]+"30",tension:.4,fill:false,pointRadius:3})));
 
   // Transportadoras
@@ -1620,6 +1808,13 @@ function renderCharts(data){
   mkBH("c-tr-pe",trL,[{label:"Peso",data:trT.map(([,v])=>pS(v)),backgroundColor:"rgba(0,163,255,.75)",borderRadius:4}]);
   mkBH("c-tr-rk",trL,[{label:"R$/kg",data:trT.map(([,v])=>rA(v)),backgroundColor:"rgba(0,229,255,.75)",borderRadius:4}]);
   mkBH("c-tr-pc",trL,[{label:"% Frete",data:trT.map(([,v])=>pA(v)),backgroundColor:"rgba(255,179,64,.8)",borderRadius:4}],{isPct:true});
+  // TICKET MÉDIO POR TRANSPORTADORA (vFrete total / nº CT-es)
+  mkBH("c-tr-ticket",trL,[{
+    label:"Ticket Médio (R$)",
+    data:trT.map(([,v])=>v.length>0?fS(v)/v.length:0),
+    backgroundColor:"rgba(167,139,250,.8)",
+    borderRadius:4
+  }]);
   mkB("c-tr-cv",trT.slice(0,8).map(([k])=>k.length>14?k.slice(0,12)+"…":k),[
     {label:"COMPRA",data:trT.slice(0,8).map(([,v])=>fS(v.filter(c=>c.tipo_op==="COMPRA"))),backgroundColor:"rgba(0,208,132,.75)",borderRadius:4},
     {label:"VENDA",data:trT.slice(0,8).map(([,v])=>fS(v.filter(c=>c.tipo_op==="VENDA"))),backgroundColor:"rgba(0,163,255,.75)",borderRadius:4},
