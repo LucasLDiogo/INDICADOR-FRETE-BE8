@@ -405,11 +405,11 @@ body::before{background:
         </div>
       </div>
     </div>
-    <div class="fb-s"><div class="fb-dot" id="fb-dot"></div><span id="fb-lbl">Firebase...</span></div>
+    <div class="fb-s"><div class="fb-dot" id="fb-dot"></div><span id="fb-lbl">Supabase...</span></div>
     <div class="hdr-badge" id="cte-ctr">0 CT-es</div>
     <button class="btn btn-b" onclick="exportPDF()">📄 PDF</button>
     <button class="btn btn-w" onclick="exportInsightsPDF()">⭐ Insights PDF</button>
-    <button class="btn btn-d" onclick="clearAll()" title="Limpar TUDO — memória local + Firebase">🗑</button>
+    <button class="btn btn-d" onclick="clearAll()" title="Limpar TUDO — memória local + Supabase">🗑</button>
   </div>
 </header>
 
@@ -719,131 +719,151 @@ body::before{background:
 <footer id="footer">Desenvolvido por Lucas L. Diogo para a Be8 2026 · Indicador Custo Transporte v2.0</footer>
 
 <script type="module">
-import{initializeApp}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import{getFirestore,collection,doc,setDoc,getDocs,deleteDoc,writeBatch,query,limit}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-const cfg={apiKey:"AIzaSyCofRClTS77tjLqo_R2m-9VIrgxHI02ojI",authDomain:"indicador-frete-be8.firebaseapp.com",projectId:"indicador-frete-be8",storageBucket:"indicador-frete-be8.firebasestorage.app",messagingSenderId:"787823147349",appId:"1:787823147349:web:e45f05e2dde93aa1e4d7dc"};
-try{
-  const app=initializeApp(cfg);const db=getFirestore(app);
+/* ══════════════════════════════════════════════
+   SUPABASE — substitui Firebase Firestore
+   ──────────────────────────────────────────────
+   • Sem limite diário de writes (plano free = 500 MB storage)
+   • Upsert em lote via REST API (até 1000 rows por request)
+   • Select com paginação automática (1000 rows por página)
+   • Delete em lote via filtro SQL
+══════════════════════════════════════════════ */
+import{createClient}from"https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-  // ── Expor funções globais ──
-  window.fbSave=async c=>{
-    try{
-      // Sanitizar: remover campos undefined/null que o Firestore não aceita
-      const safe={};
-      Object.keys(c).forEach(k=>{
-        const v=c[k];
-        if(v!==undefined && v!==null) safe[k]=v;
-        else safe[k]=""; // substituir undefined por string vazia
-      });
-      await setDoc(doc(db,"ctes",safe.chaveCte),safe);
+const SUPA_URL  = "https://sjkfhuwptyghdghkkldv.supabase.co";
+const SUPA_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNqa2ZodXdwdHlnaGRnaGtrbGR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzMzA2MDIsImV4cCI6MjA5MTkwNjYwMn0.v6VXO_zUbY8BjjHjkI_jhsld7Q4IznmyJC5pTvZVQnE";
+const TABLE     = "ctes";
+
+try {
+  const supabase = createClient(SUPA_URL, SUPA_KEY);
+
+  // ── Sanitização: remove campos undefined/null, limita a colunas da tabela ──
+  const COLUMNS = new Set([
+    "chaveCte","nCT","dhEmi","mesNum","trimestre","ano",
+    "munIni","ufIni","munFim","ufFim","rota",
+    "tr_orig","cnpjTr","cnpjEmit","nomeEmit","tr_pad","tr_raiz","tr_ok",
+    "fo_orig","cnpjRem","nomeRem","fo_pad","fo_matr",
+    "cnpjExped","nomeExped","cnpjReceb","nomeReceb",
+    "dest_orig","cnpjDest","cnpjTom","nomeDest","destinatario","cidadeDest","ufDest",
+    "tomaInd","tomaDesc","cnpjTomador","nomeTomador",
+    "vFrete","vMerc","peso","pesoCubado","volume",
+    "prod","pct","rkg","tipo_op","st_rem","st_tom","fil_ori","fil_dest"
+  ]);
+  function sanitize(c){
+    const safe = {};
+    COLUMNS.forEach(k => {
+      const v = c[k];
+      if(v === undefined || v === null) safe[k] = (typeof 0 === typeof v) ? 0 : "";
+      else safe[k] = v;
+    });
+    // Garante booleano para tr_ok
+    safe.tr_ok = !!safe.tr_ok;
+    return safe;
+  }
+
+  // ── fbSave (individual) ──
+  window.fbSave = async function(c){
+    try {
+      const { error } = await supabase.from(TABLE).upsert(sanitize(c), { onConflict: "chaveCte" });
+      if(error){ console.error("fbSave:", error.message); return false; }
       return true;
-    }catch(e){console.error("fbSave:",e.message,e.code);return false;}
+    } catch(e){ console.error("fbSave:", e); return false; }
   };
 
-  // ── SALVAMENTO EM LOTE (writeBatch) — muito mais rápido que setDoc individual ──
-  // Firestore aceita até 500 ops por batch. Com 46k CT-es, isso reduz de ~46k
-  // requests HTTP para ~92 commits (até 500 docs cada) = de 2h para ~3 min.
+  // ── fbSaveBatch (em lote — até 500 rows por upsert) ──
   window.fbSaveBatch = async function(ctes, onProgress){
     if(!ctes || !ctes.length) return 0;
-    const BATCH_SIZE = 400;   // folga sobre o limite de 500
+    const BATCH = 500;
     let saved = 0;
-    for(let i=0; i<ctes.length; i+=BATCH_SIZE){
-      const slice = ctes.slice(i, i+BATCH_SIZE);
-      const batch = writeBatch(db);
-      slice.forEach(c => {
-        // Sanitização
-        const safe = {};
-        Object.keys(c).forEach(k => {
-          const v = c[k];
-          safe[k] = (v === undefined || v === null) ? "" : v;
-        });
-        if(!safe.chaveCte){ return; /* pula docs sem chave */ }
-        batch.set(doc(db,"ctes",safe.chaveCte), safe);
-      });
-      try{
-        await batch.commit();
-        saved += slice.length;
-        if(onProgress) onProgress(saved, ctes.length);
-      }catch(e){
-        console.error("fbSaveBatch commit error:", e);
-        // Fallback: tenta salvar doc por doc neste lote
-        for(const c of slice){
-          try{ await window.fbSave(c); saved++; }catch(_){}
-          if(onProgress) onProgress(saved, ctes.length);
+    for(let i = 0; i < ctes.length; i += BATCH){
+      const slice = ctes.slice(i, i + BATCH).map(sanitize);
+      try {
+        const { error } = await supabase.from(TABLE).upsert(slice, { onConflict: "chaveCte" });
+        if(error){
+          console.error("fbSaveBatch upsert error:", error.message);
+          // Fallback: tenta 1 por 1
+          for(const row of slice){
+            try { await supabase.from(TABLE).upsert(row, { onConflict: "chaveCte" }); saved++; } catch(_){}
+          }
+        } else {
+          saved += slice.length;
         }
+      } catch(e){
+        console.error("fbSaveBatch exception:", e);
       }
+      if(onProgress) onProgress(saved, ctes.length);
     }
     return saved;
   };
 
-  window.fbLoad=async()=>{
-    try{const s=await getDocs(collection(db,"ctes"));const r=[];s.forEach(d=>r.push(d.data()));return r;}
-    catch(e){console.error("fbLoad:",e);return[];}
+  // ── fbLoad (com paginação — Supabase retorna max 1000 rows por request) ──
+  window.fbLoad = async function(){
+    try {
+      const all = [];
+      const PAGE = 1000;
+      let from = 0;
+      let hasMore = true;
+      while(hasMore){
+        const { data, error } = await supabase.from(TABLE)
+          .select("*")
+          .range(from, from + PAGE - 1);
+        if(error){ console.error("fbLoad page error:", error.message); break; }
+        if(data && data.length){
+          all.push(...data);
+          from += data.length;
+          if(data.length < PAGE) hasMore = false;
+        } else {
+          hasMore = false;
+        }
+      }
+      return all;
+    } catch(e){ console.error("fbLoad:", e); return []; }
   };
 
-  window.fbClear=async(onProgress)=>{
-    // ─── Limpeza PAGINADA — evita travamento com coleções grandes (10k+ docs) ───
-    // Estratégia: carrega lotes de 500 via query(limit), deleta em writeBatch,
-    // repete até a coleção ficar vazia. Reporta progresso a cada batch.
-    try{
-      const PAGE_SIZE = 500;      // docs por página
-      const BATCH_SIZE = 400;     // docs por writeBatch (limite Firestore = 500)
-      let deleted = 0;
-      let totalEstim = null;     // estimativa inicial de total
-
-      // Estimativa inicial (opcional) — serve só para a barra de progresso
-      if(onProgress) onProgress(0, 0, "Consultando Firebase...");
-
-      // 1ª página — serve também para saber se há algo
-      let snap = await getDocs(query(collection(db,"ctes"), limit(PAGE_SIZE)));
-      if(snap.empty){
-        if(onProgress) onProgress(0, 0, "Coleção já está vazia.");
+  // ── fbClear (delete com paginação) ──
+  window.fbClear = async function(onProgress){
+    try {
+      if(onProgress) onProgress(0, 0, "Consultando Supabase...");
+      // Conta total
+      const { count, error: countErr } = await supabase.from(TABLE)
+        .select("chaveCte", { count: "exact", head: true });
+      const total = count || 0;
+      if(total === 0){
+        if(onProgress) onProgress(0, 0, "Tabela já está vazia.");
         return true;
       }
-
-      // Se há dados, assume que podem ser muitos — reporta de forma incremental
-      if(onProgress) onProgress(0, PAGE_SIZE, "Iniciando exclusão em lotes...");
-
-      while(!snap.empty){
-        const docs = snap.docs;
-        // Divide a página em batches menores (Firestore aceita até 500 por batch,
-        // usamos 400 para folga)
-        for(let i=0; i<docs.length; i+=BATCH_SIZE){
-          const batch = writeBatch(db);
-          const chunk = docs.slice(i, i+BATCH_SIZE);
-          chunk.forEach(d => batch.delete(doc(db,"ctes",d.id)));
-          await batch.commit();
-          deleted += chunk.length;
-          // Estimativa dinâmica: após primeiro batch, assume que ainda resta
-          // pelo menos 1 página (para a barra não dar 100% antes da hora)
-          const estTotal = Math.max(deleted + PAGE_SIZE, deleted);
-          if(onProgress) onProgress(deleted, estTotal, "Removendo lote "+deleted+"...");
-        }
-        // Próxima página — se vier vazia, acabou
-        snap = await getDocs(query(collection(db,"ctes"), limit(PAGE_SIZE)));
+      if(onProgress) onProgress(0, total, "Iniciando exclusão de "+total+" registros...");
+      // Deleta em lotes de 500 (busca as chaves, deleta pelo range)
+      let deleted = 0;
+      while(deleted < total + 1000){ // safety cap
+        const { data, error: selErr } = await supabase.from(TABLE)
+          .select("chaveCte")
+          .limit(500);
+        if(selErr){ console.error("fbClear select:", selErr.message); break; }
+        if(!data || !data.length) break;
+        const keys = data.map(r => r.chaveCte);
+        const { error: delErr } = await supabase.from(TABLE)
+          .delete()
+          .in("chaveCte", keys);
+        if(delErr){ console.error("fbClear delete:", delErr.message); break; }
+        deleted += keys.length;
+        if(onProgress) onProgress(deleted, Math.max(total, deleted), "Removidos: "+deleted+"/"+total);
       }
-
-      // Finalização
-      if(onProgress) onProgress(deleted, deleted, "Concluído: "+deleted+" documentos removidos.");
+      if(onProgress) onProgress(deleted, deleted, "Concluído: "+deleted+" removidos.");
       return true;
-    }catch(e){
+    } catch(e){
       console.error("fbClear error:", e);
-      if(onProgress) onProgress(0, 0, "ERRO: "+(e.message||e.code||"desconhecido"));
+      if(onProgress) onProgress(0, 0, "ERRO: "+(e.message||"desconhecido"));
       return false;
     }
   };
 
   // ── Status visual ──
   document.getElementById("fb-dot").classList.add("on");
-  document.getElementById("fb-lbl").textContent="Firebase OK";
+  document.getElementById("fb-lbl").textContent = "Supabase OK";
 
-  // ── Carregar dados do Firebase com espera das funções do script regular ──
-  // SOLUÇÃO DO RACE CONDITION: esperar até window.repad estar disponível
-  // antes de processar os documentos carregados
+  // ── Carregar dados ao iniciar ──
   function waitReady(fn, tries){
     tries = tries || 0;
-    // Verificar função repad real (function declaration = hoisted, sempre disponível)
-    // NÃO verificar window.repad pois pode ser stub vazio
     var repadOk  = typeof repad === "function" && repad.toString().length > 50;
     var normOk   = typeof normalizeCTE === "function";
     var logOk    = typeof addLog === "function";
@@ -857,24 +877,22 @@ try{
   }
 
   waitReady(function(){
-    window.addLog("Firebase Firestore conectado.","ok");
+    window.addLog("Supabase conectado (PostgreSQL · São Paulo).","ok");
     window.fbLoad().then(function(ctes){
       if(!ctes || !ctes.length){
-        window.addLog("Firebase: nenhum CT-e salvo ainda.","info");
+        window.addLog("Supabase: nenhum CT-e salvo ainda.","info");
         return;
       }
-      var added=0;
+      var added = 0;
       ctes.forEach(function(c){
-        var norm=window.normalizeCTE(c);
-        if(!window.ALL.find(function(x){return x.chaveCte===norm.chaveCte;})){
+        var norm = window.normalizeCTE(c);
+        if(!window.ALL.find(function(x){ return x.chaveCte === norm.chaveCte; })){
           window.ALL.push(norm);
           added++;
         }
       });
-      window.addLog("Firebase: "+added+" CT-es carregados ("+ctes.length+" total).","ok");
-      if(added>0){
-        // Chamar repad() diretamente (function declaration hoisted, sempre real)
-        // Usar setTimeout para liberar call stack antes do processamento
+      window.addLog("Supabase: "+added+" CT-es carregados ("+ctes.length+" total).","ok");
+      if(added > 0){
         setTimeout(function(){
           try { repad(); } catch(e){
             console.error("repad error:", e.message);
@@ -883,18 +901,18 @@ try{
         }, 0);
       }
     }).catch(function(e){
-      window.addLog("Erro ao carregar Firebase: "+e.message,"err");
+      window.addLog("Erro ao carregar Supabase: "+e.message,"err");
     });
   });
 
-}catch(e){
+} catch(e){
   document.getElementById("fb-dot").classList.add("err");
-  document.getElementById("fb-lbl").textContent="Offline";
-  window.fbSave=async()=>false;
-  window.fbSaveBatch=async()=>0;
-  window.fbLoad=async()=>[];
-  window.fbClear=async()=>true;
-  if(typeof window.addLog==="function") window.addLog("Firebase offline: "+e.message,"warn");
+  document.getElementById("fb-lbl").textContent = "Offline";
+  window.fbSave = async()=>false;
+  window.fbSaveBatch = async()=>0;
+  window.fbLoad = async()=>[];
+  window.fbClear = async()=>true;
+  if(typeof window.addLog === "function") window.addLog("Supabase offline: "+e.message,"warn");
 }
 </script>
 
@@ -960,7 +978,7 @@ function cnpjRaiz(v){ return cleanCNPJ(v).slice(0,8).padStart(8,"0"); }
 
 window.ALL = [];
 
-// ── Expor funções críticas imediatamente para o módulo Firebase ──
+// ── Expor funções críticas imediatamente para o módulo Supabase ──
 // Isso resolve o race condition entre <script type="module"> e <script> regular
 // As funções são hoisted (function declarations), então já existem aqui
 window.addLog = function(msg, type){
@@ -1104,7 +1122,7 @@ function loadAux(file,tipo){
 }
 
 
-/* NORMALIZAÇÃO — compatibilidade com Firebase antigo (v1) */
+/* NORMALIZAÇÃO — compatibilidade com dados antigos (v1) */
 function normalizeCTE(c){
   var vFrete = c.vFrete || 0;
   var vMerc  = c.vMerc || c.vMercadoria || 0;
@@ -1213,7 +1231,7 @@ function dropXML(e){e.preventDefault();document.getElementById("uz-xml").classLi
    FILE PROCESSING — suporta até 60.000 XMLs em lote
    ──────────────────────────────────────────────
    • Batch de 100 arquivos paralelos
-   • Save no Firebase em background (não bloqueia parse)
+   • Save no Supabase em background (não bloqueia parse)
    • Repad/refresh apenas no final (evita renderizar a cada batch)
 ══════════════════════════════════════════════ */
 async function handleFiles(files){
@@ -1226,7 +1244,7 @@ async function handleFiles(files){
 
   // ── BLOQUEIO DE FECHAMENTO DE ABA ──
   // Enquanto está processando/salvando, impede que o usuário feche a aba e perca dados.
-  const beforeUnload = function(ev){ ev.preventDefault(); ev.returnValue = "Importação em andamento. Sair agora pode perder CT-es que ainda não foram salvos no Firebase."; return ev.returnValue; };
+  const beforeUnload = function(ev){ ev.preventDefault(); ev.returnValue = "Importação em andamento. Sair agora pode perder CT-es que ainda não foram salvos no Supabase."; return ev.returnValue; };
   window.addEventListener("beforeunload", beforeUnload);
 
   document.getElementById("prog").style.display="block";
@@ -1266,12 +1284,12 @@ async function handleFiles(files){
   const t1 = Date.now();
   addLog("Parse concluído: "+pro+" novos · "+dup+" dup · "+err+" erros · "+((t1-t0)/1000).toFixed(1)+"s","ok");
 
-  // ───── FASE 2: SALVAMENTO EM LOTE no Firebase ─────
+  // ───── FASE 2: SALVAMENTO EM LOTE no Supabase ─────
   // CRÍTICO: aguarda terminar antes de liberar a aba. Sem isso, se o usuário
   // recarregar a página enquanto salva, os CT-es se perdem.
   if(window.fbSaveBatch && newCtes.length){
-    addLog("Fase 2/2: Salvando "+newCtes.length+" CT-es no Firebase (em lotes de 400)...","info");
-    document.getElementById("pb-l").textContent="[2/2] Salvando no Firebase...";
+    addLog("Fase 2/2: Salvando CT-es no Supabase (em lotes de 400)...","info");
+    document.getElementById("pb-l").textContent="[2/2] Salvando no Supabase...";
     document.getElementById("pb").style.width="50%";
     try{
       const saved = await window.fbSaveBatch(newCtes, function(savedN, totalN){
@@ -1279,16 +1297,16 @@ async function handleFiles(files){
         document.getElementById("pb").style.width = pct.toFixed(1)+"%";
         const elapsed = ((Date.now()-t1)/1000).toFixed(1);
         const rate = savedN>0 ? (savedN/(elapsed||1)).toFixed(0) : "0";
-        document.getElementById("pb-l").textContent = "[2/2] Firebase: "+savedN+"/"+totalN+" ("+rate+" docs/s · "+elapsed+"s)";
+        document.getElementById("pb-l").textContent = "[2/2] Supabase: "+savedN+"/"+totalN+" ("+rate+" docs/s · "+elapsed+"s)";
       });
       const t2 = Date.now();
-      addLog("Firebase: "+saved+" CT-es salvos em "+((t2-t1)/1000).toFixed(1)+"s ("+Math.round(saved/((t2-t1)/1000||1))+" docs/s)","ok");
+      addLog("Supabase: "+saved+" CT-es salvos em "+((t2-t1)/1000).toFixed(1)+"s ("+Math.round(saved/((t2-t1)/1000||1))+" docs/s)","ok");
     }catch(e){
-      addLog("✗ Erro ao salvar no Firebase: "+e.message+". Os CT-es estão em memória mas NÃO foram persistidos!","err");
-      alert("⚠️ Erro ao salvar no Firebase!\n\nOs CT-es estão visíveis na tela mas NÃO foram salvos no banco. Ao recarregar a página, vão se perder.\n\n"+e.message);
+      addLog("✗ Erro ao salvar no Supabase: "+e.message+". Os CT-es estão em memória mas NÃO foram persistidos!","err");
+      alert("⚠️ Erro ao salvar no Supabase!\n\nOs CT-es estão visíveis na tela mas NÃO foram salvos no banco. Ao recarregar a página, vão se perder.\n\n"+e.message);
     }
   } else if(!window.fbSaveBatch){
-    addLog("⚠️ Firebase offline — CT-es ficam apenas em memória (se perdem ao recarregar).","warn");
+    addLog("⚠️ Supabase offline — CT-es ficam apenas em memória (se perdem ao recarregar).","warn");
   }
 
   // Libera fechamento da aba
@@ -2268,7 +2286,7 @@ async function exportInsightsPDF(){
 ══════════════════════════════════════════════ */
 async function clearAll(){
   const n = window.ALL.length;
-  const msg = "⚠️ Isso vai remover TODOS os "+n+" CT-es da memória E do Firebase.\n\n"
+  const msg = "⚠️ Isso vai remover TODOS os "+n+" CT-es da memória E do Supabase.\n\n"
     + "Com 10.000+ CT-es a operação pode levar 1-3 minutos.\n"
     + "Não feche a aba durante o processo.\n\nDeseja continuar?";
   if(!confirm(msg)) return;
@@ -2280,13 +2298,13 @@ async function clearAll(){
   // Mostra barra de progresso
   document.getElementById("prog").style.display="block";
   document.getElementById("pb").style.width="0%";
-  document.getElementById("pb-l").textContent="Conectando ao Firebase para limpar...";
+  document.getElementById("pb-l").textContent="Conectando ao Supabase para limpar...";
   document.getElementById("p-tot").textContent="?";
   document.getElementById("p-pro").textContent="0";
   document.getElementById("p-dup").textContent="0";
   document.getElementById("p-err").textContent="0";
 
-  addLog("Iniciando limpeza do Firebase...","warn");
+  addLog("Iniciando limpeza do Supabase...","warn");
 
   // Esconde dashboard
   document.getElementById("dash").style.display="none";
@@ -2297,8 +2315,8 @@ async function clearAll(){
   var uzb = document.getElementById("uz-xml-b"); if(uzb){ uzb.style.display="none"; uzb.textContent=""; }
 
   if(!window.fbClear){
-    addLog("Firebase offline — apenas memória local limpa.","warn");
-    document.getElementById("pb-l").textContent="Firebase offline — memória local limpa.";
+    addLog("Supabase offline — apenas memória local limpa.","warn");
+    document.getElementById("pb-l").textContent="Supabase offline — memória local limpa.";
     return;
   }
 
@@ -2320,19 +2338,19 @@ async function clearAll(){
       document.getElementById("p-pro").textContent = deleted;
       // Log ocasional (a cada 2000 docs) para não poluir
       if(deleted>0 && deleted % 2000 === 0){
-        addLog("Firebase: "+deleted+" documentos removidos...","info");
+        addLog("Supabase: "+deleted+" documentos removidos...","info");
       }
     });
     finished = true;
     clearTimeout(timeoutHandle);
     if(ok){
       document.getElementById("pb").style.width="100%";
-      document.getElementById("pb-l").textContent="✓ Firebase limpo com sucesso.";
-      addLog("✓ Firebase limpo com sucesso.","ok");
+      document.getElementById("pb-l").textContent="✓ Supabase limpo com sucesso.";
+      addLog("✓ Supabase limpo com sucesso.","ok");
     } else {
-      document.getElementById("pb-l").textContent="✗ Erro ao limpar Firebase. Verifique o console (F12).";
-      addLog("✗ Erro ao limpar Firebase. Abra o console do navegador (F12) para detalhes.","err");
-      alert("Erro ao limpar Firebase.\n\nPossíveis causas:\n• Sem conexão com a internet\n• Regras de segurança do Firestore bloqueando\n• Quota da Firebase excedida\n\nAbra o console do navegador (F12 → aba Console) para ver o erro exato.");
+      document.getElementById("pb-l").textContent="✗ Erro ao limpar Supabase. Verifique o console (F12).";
+      addLog("✗ Erro ao limpar Supabase. Abra o console do navegador (F12) para detalhes.","err");
+      alert("Erro ao limpar Supabase.\n\nPossíveis causas:\n• Sem conexão com a internet\n• Regras de segurança do Supabase bloqueando\n• Problemas de rede ou permissão\n\nAbra o console do navegador (F12 → aba Console) para ver o erro exato.");
     }
   } catch(e){
     finished = true;
