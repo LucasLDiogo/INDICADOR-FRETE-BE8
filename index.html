@@ -407,11 +407,9 @@ body::before{background:
     </div>
     <div class="fb-s"><div class="fb-dot" id="fb-dot"></div><span id="fb-lbl">Firebase...</span></div>
     <div class="hdr-badge" id="cte-ctr">0 CT-es</div>
-    <button class="btn btn-s" onclick="loadDemoData()" title="Carrega 63 CT-es simulados com múltiplas transportadoras, fornecedores, filiais e tipos de operação (VENDA/COMPRA/TRANSFERÊNCIA) para testar todas as funcionalidades sem arquivos reais">⭐ Demo</button>
     <button class="btn btn-b" onclick="exportPDF()">📄 PDF</button>
     <button class="btn btn-w" onclick="exportInsightsPDF()">⭐ Insights PDF</button>
-    <button class="btn btn-d" onclick="clearAll()" title="Limpar TUDO — memória local + Firebase (lento com muitos dados)">🗑 Tudo</button>
-    <button class="btn btn-s" onclick="clearLocalOnly()" title="Limpar APENAS a tela — Firebase preservado. Use quando o 🗑 Tudo travar">🧹 Local</button>
+    <button class="btn btn-d" onclick="clearAll()" title="Limpar TUDO — memória local + Firebase">🗑</button>
   </div>
 </header>
 
@@ -705,7 +703,7 @@ body::before{background:
   <div id="es" style="margin-top:40px">
     <div class="es"><div class="ei">📊</div>
       <p style="font-size:14px;font-weight:600;color:var(--text1);margin-bottom:5px">Nenhum dado carregado</p>
-      <p style="font-size:12px">Clique em <strong style="color:var(--acc1)">📥 Importar dados</strong> no topo para carregar XMLs de CT-e, ou use <strong style="color:var(--warn)">⭐ Demo</strong> para visualizar com dados simulados.</p>
+      <p style="font-size:12px">Clique em <strong style="color:var(--acc1)">📥 Importar dados</strong> no topo para carregar os XMLs de CT-e.</p>
     </div>
   </div>
 </main>
@@ -740,6 +738,42 @@ try{
       await setDoc(doc(db,"ctes",safe.chaveCte),safe);
       return true;
     }catch(e){console.error("fbSave:",e.message,e.code);return false;}
+  };
+
+  // ── SALVAMENTO EM LOTE (writeBatch) — muito mais rápido que setDoc individual ──
+  // Firestore aceita até 500 ops por batch. Com 46k CT-es, isso reduz de ~46k
+  // requests HTTP para ~92 commits (até 500 docs cada) = de 2h para ~3 min.
+  window.fbSaveBatch = async function(ctes, onProgress){
+    if(!ctes || !ctes.length) return 0;
+    const BATCH_SIZE = 400;   // folga sobre o limite de 500
+    let saved = 0;
+    for(let i=0; i<ctes.length; i+=BATCH_SIZE){
+      const slice = ctes.slice(i, i+BATCH_SIZE);
+      const batch = writeBatch(db);
+      slice.forEach(c => {
+        // Sanitização
+        const safe = {};
+        Object.keys(c).forEach(k => {
+          const v = c[k];
+          safe[k] = (v === undefined || v === null) ? "" : v;
+        });
+        if(!safe.chaveCte){ return; /* pula docs sem chave */ }
+        batch.set(doc(db,"ctes",safe.chaveCte), safe);
+      });
+      try{
+        await batch.commit();
+        saved += slice.length;
+        if(onProgress) onProgress(saved, ctes.length);
+      }catch(e){
+        console.error("fbSaveBatch commit error:", e);
+        // Fallback: tenta salvar doc por doc neste lote
+        for(const c of slice){
+          try{ await window.fbSave(c); saved++; }catch(_){}
+          if(onProgress) onProgress(saved, ctes.length);
+        }
+      }
+    }
+    return saved;
   };
 
   window.fbLoad=async()=>{
@@ -857,6 +891,7 @@ try{
   document.getElementById("fb-dot").classList.add("err");
   document.getElementById("fb-lbl").textContent="Offline";
   window.fbSave=async()=>false;
+  window.fbSaveBatch=async()=>0;
   window.fbLoad=async()=>[];
   window.fbClear=async()=>true;
   if(typeof window.addLog==="function") window.addLog("Firebase offline: "+e.message,"warn");
@@ -1188,6 +1223,12 @@ async function handleFiles(files){
   if(xmls.length>60000){
     if(!confirm("⚠️ Você selecionou "+xmls.length+" arquivos. O limite recomendado é 60.000. Continuar mesmo assim?")) return;
   }
+
+  // ── BLOQUEIO DE FECHAMENTO DE ABA ──
+  // Enquanto está processando/salvando, impede que o usuário feche a aba e perca dados.
+  const beforeUnload = function(ev){ ev.preventDefault(); ev.returnValue = "Importação em andamento. Sair agora pode perder CT-es que ainda não foram salvos no Firebase."; return ev.returnValue; };
+  window.addEventListener("beforeunload", beforeUnload);
+
   document.getElementById("prog").style.display="block";
   let tot=xmls.length, pro=0, dup=0, err=0;
   document.getElementById("p-tot").textContent=tot;
@@ -1196,6 +1237,9 @@ async function handleFiles(files){
   const newCtes = [];
   const B = tot > 5000 ? 100 : 50;  // batches maiores quando há muito volume
   const t0 = Date.now();
+
+  // ───── FASE 1: PARSE dos XMLs ─────
+  addLog("Fase 1/2: Processando "+tot+" XMLs...","info");
   for(let i=0;i<xmls.length;i+=B){
     const slice = xmls.slice(i,i+B);
     await Promise.all(slice.map(async f=>{
@@ -1210,34 +1254,54 @@ async function handleFiles(files){
       }catch(e){err++;}
     }));
     const done=Math.min(i+B,xmls.length);
-    document.getElementById("pb").style.width=(done/tot*100)+"%";
+    document.getElementById("pb").style.width=(done/tot*50)+"%"; // 0-50% = parse
     const elapsed = ((Date.now()-t0)/1000).toFixed(1);
     const rate = done>0 ? (done/(elapsed||1)).toFixed(0) : "0";
-    document.getElementById("pb-l").textContent="Processando "+done+"/"+tot+" ("+rate+" arq/s · "+elapsed+"s)";
+    document.getElementById("pb-l").textContent="[1/2] Parse: "+done+"/"+tot+" ("+rate+" arq/s · "+elapsed+"s)";
     document.getElementById("p-pro").textContent=pro;
     document.getElementById("p-dup").textContent=dup;
     document.getElementById("p-err").textContent=err;
     await new Promise(r=>setTimeout(r,5));
   }
-  // Salva em Firebase em background — não bloqueia a UI
-  if(window.fbSave && newCtes.length){
-    addLog("Salvando "+newCtes.length+" CT-es no Firebase em background...","info");
-    (async function(){
-      const FB_BATCH = 50;
-      let savedFB = 0;
-      for(let j=0;j<newCtes.length;j+=FB_BATCH){
-        await Promise.all(newCtes.slice(j,j+FB_BATCH).map(c=>fbSave(c).catch(()=>false)));
-        savedFB += Math.min(FB_BATCH, newCtes.length-j);
-      }
-      addLog("Firebase: "+savedFB+" CT-es salvos.","ok");
-    })();
+  const t1 = Date.now();
+  addLog("Parse concluído: "+pro+" novos · "+dup+" dup · "+err+" erros · "+((t1-t0)/1000).toFixed(1)+"s","ok");
+
+  // ───── FASE 2: SALVAMENTO EM LOTE no Firebase ─────
+  // CRÍTICO: aguarda terminar antes de liberar a aba. Sem isso, se o usuário
+  // recarregar a página enquanto salva, os CT-es se perdem.
+  if(window.fbSaveBatch && newCtes.length){
+    addLog("Fase 2/2: Salvando "+newCtes.length+" CT-es no Firebase (em lotes de 400)...","info");
+    document.getElementById("pb-l").textContent="[2/2] Salvando no Firebase...";
+    document.getElementById("pb").style.width="50%";
+    try{
+      const saved = await window.fbSaveBatch(newCtes, function(savedN, totalN){
+        const pct = 50 + (savedN/totalN*50); // 50-100% = save
+        document.getElementById("pb").style.width = pct.toFixed(1)+"%";
+        const elapsed = ((Date.now()-t1)/1000).toFixed(1);
+        const rate = savedN>0 ? (savedN/(elapsed||1)).toFixed(0) : "0";
+        document.getElementById("pb-l").textContent = "[2/2] Firebase: "+savedN+"/"+totalN+" ("+rate+" docs/s · "+elapsed+"s)";
+      });
+      const t2 = Date.now();
+      addLog("Firebase: "+saved+" CT-es salvos em "+((t2-t1)/1000).toFixed(1)+"s ("+Math.round(saved/((t2-t1)/1000||1))+" docs/s)","ok");
+    }catch(e){
+      addLog("✗ Erro ao salvar no Firebase: "+e.message+". Os CT-es estão em memória mas NÃO foram persistidos!","err");
+      alert("⚠️ Erro ao salvar no Firebase!\n\nOs CT-es estão visíveis na tela mas NÃO foram salvos no banco. Ao recarregar a página, vão se perder.\n\n"+e.message);
+    }
+  } else if(!window.fbSaveBatch){
+    addLog("⚠️ Firebase offline — CT-es ficam apenas em memória (se perdem ao recarregar).","warn");
   }
-  document.getElementById("pb-l").textContent="Concluído: "+pro+" novos · "+dup+" dup · "+err+" erros · "+((Date.now()-t0)/1000).toFixed(1)+"s";
+
+  // Libera fechamento da aba
+  window.removeEventListener("beforeunload", beforeUnload);
+
+  const totalTime = ((Date.now()-t0)/1000).toFixed(1);
+  document.getElementById("pb").style.width="100%";
+  document.getElementById("pb-l").textContent="✓ Concluído: "+pro+" novos · "+dup+" dup · "+err+" erros · "+totalTime+"s";
   var uzBadge=document.getElementById("uz-xml-b");
   if(uzBadge){ uzBadge.textContent="📄 "+window.ALL.length+" CT-es"; uzBadge.style.display="inline-block"; }
   var istXml=document.getElementById("ist-xml");
   if(istXml){ istXml.textContent="📄 CT-es: "+window.ALL.length; istXml.classList.add("ok"); }
-  addLog("--- Importação: "+pro+" novos CT-es em "+((Date.now()-t0)/1000).toFixed(1)+"s ---","ok");
+  addLog("═══ Importação FINALIZADA: "+pro+" novos CT-es · "+totalTime+"s total ═══","ok");
   refresh();
 }
 
@@ -1392,107 +1456,6 @@ function parseXML(txt){
   }catch(e){console.error("parseXML error:",e);return null;}
 }
 
-/* ══════════════════════════════════════════════
-   DEMO DATA — atualizada para regras v2:
-   • CNPJ completo (14 dígitos) para cada filial Be8
-   • Captura tomador via <toma> (0..4)
-   • Cobertura 2025 e 2026
-══════════════════════════════════════════════ */
-function loadDemoData(){
-  const TRS=[
-    ["L CARLOS",        "32285535000142"],
-    ["AG BRASIL",       "17339465000101"],
-    ["ALFA",            "82110818000121"],
-    ["BRINGER",         "94001641000101"],
-    ["RODONAVES",       "44914992000101"],
-  ];
-  // Mistura de filiais Be8 (com CNPJ completo) + alguns externos
-  const REM_LIST=[
-    {cnpj:"07322382000119",nome:"BE8 PASSO FUNDO",          tipo:"FILIAL"},
-    {cnpj:"07322382000461",nome:"BE8 MARIALVA",             tipo:"FILIAL"},
-    {cnpj:"33931174000127",nome:"BE8 FLORIANO",             tipo:"FILIAL"},
-    {cnpj:"08684263000179",nome:"BE8 NOVA MARILANDIA",      tipo:"FILIAL"},
-    {cnpj:"30937909000131",nome:"BE8 SANTO ANTONIO DO TAUA",tipo:"FILIAL"},
-    {cnpj:"63228664000122",nome:"BE8 ALTO ARAGUAIA",        tipo:"FILIAL"},
-    {cnpj:"76093731000148",nome:"COPACOL",                  tipo:"EXTERNO"},
-    {cnpj:"10629776000175",nome:"ZIEHL ABEGG IMPORTACAO",   tipo:"EXTERNO"},
-  ];
-  const DEST_LIST=[
-    {cnpj:"08495847000104",nome:"BE8 PASSO FUNDO IMPOR/EXPOR",tipo:"FILIAL"},
-    {cnpj:"08495847000368",nome:"BE8 SOLEDADE IMPOR/EXPOR",   tipo:"FILIAL"},
-    {cnpj:"11284311000146",nome:"BE8 SÃO PAULO",              tipo:"FILIAL"},
-    {cnpj:"56416732000111",nome:"BE8 PASSO FUNDO ADM",        tipo:"FILIAL"},
-    {cnpj:"00993264000189",nome:"INTEGRADA",                  tipo:"EXTERNO"},
-    {cnpj:"02916265000160",nome:"JBS S/A",                    tipo:"EXTERNO"},
-  ];
-  const ORIS=[["Santo Antonio do Taua","PA"],["Marialva","PR"],["Passo Fundo","RS"],["Nova Marilandia","MT"],["Floriano","PI"],["Alto Araguaia","MT"]];
-  const DESTS=[["Barcarena","PA"],["Passo Fundo","RS"],["São Paulo","SP"],["Curitiba","PR"],["Manaus","AM"],["Soledade","RS"]];
-  const PRODS=["GLICERINA","SOJA","MILHO","ÓLEO DE PALMA","FARELO","BIODIESEL","RAÇÃO"];
-  // Cobertura 2025 + 2026
-  const MESES=["2025-08","2025-09","2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04"];
-  const TOMA_LABELS=["Remetente","Expedidor","Recebedor","Destinatário","Outros"];
-  let added=0;
-  for(let i=0;i<63;i++){
-    const chaveCte="demo"+String(i).padStart(40,"0");
-    if(window.ALL.find(x=>x.chaveCte===chaveCte)) continue;
-    const tr=TRS[i%TRS.length];
-    const rem=REM_LIST[i%REM_LIST.length];
-    const dest=DEST_LIST[i%DEST_LIST.length];
-    const or=ORIS[i%ORIS.length];
-    const de=DESTS[i%DESTS.length];
-    const mes=MESES[Math.floor(i/7)%MESES.length];
-    const day=String((i%28)+1).padStart(2,"0");
-    const dhEmi=`${mes}-${day}T10:00:00-03:00`, dObj=new Date(dhEmi);
-    const peso=15000+Math.random()*15000, vFrete=2500+Math.random()*2000, vMerc=50000+Math.random()*50000;
-    const trI=padTR(tr[1],tr[0]);
-    const remI=padFO(rem.cnpj,rem.nome);
-    const tomI=padFO(dest.cnpj,dest.nome);
-    const op=classOp(rem.cnpj, dest.cnpj);
-    // Tomador: maior parte dos CT-es reais usa toma=3 (Destinatário)
-    // Variamos para demonstrar a regra
-    const tomaInd = String(i%5);
-    let cnpjTomador="", nomeTomador="";
-    if(tomaInd==="0"){ cnpjTomador=rem.cnpj;  nomeTomador=remI.nome; }
-    else if(tomaInd==="3"){ cnpjTomador=dest.cnpj; nomeTomador=tomI.nome; }
-    else { cnpjTomador=dest.cnpj; nomeTomador=tomI.nome; } // fallback
-    window.ALL.push({
-      chaveCte, nCT:String(1700+i), dhEmi,
-      mesNum:mes,
-      trimestre:"T"+Math.ceil((dObj.getMonth()+1)/3)+"/"+dObj.getFullYear(),
-      ano:dObj.getFullYear().toString(),
-      munIni:or[0],ufIni:or[1],munFim:de[0],ufFim:de[1],
-      rota:or[0]+"/"+or[1]+" → "+de[0]+"/"+de[1],
-      // emitente
-      tr_orig:tr[0], cnpjTr:tr[1], cnpjEmit:tr[1], nomeEmit:tr[0],
-      tr_pad:trI.nome, tr_raiz:trI.raiz, tr_ok:trI.ok,
-      // remetente
-      fo_orig:rem.nome, cnpjRem:rem.cnpj, nomeRem:rem.nome,
-      fo_pad:remI.nome, fo_matr:remI.raiz||"",
-      // expedidor / recebedor (vazios na demo)
-      cnpjExped:"", nomeExped:"", cnpjReceb:"", nomeReceb:"",
-      // destinatário
-      dest_orig:dest.nome, cnpjDest:dest.cnpj, cnpjTom:dest.cnpj,
-      destinatario:tomI.nome, nomeDest:dest.nome,
-      cidadeDest:de[0], ufDest:de[1],
-      // tomador
-      tomaInd:tomaInd, tomaDesc:TOMA_LABELS[parseInt(tomaInd,10)]||"",
-      cnpjTomador:cnpjTomador, nomeTomador:nomeTomador,
-      // financeiro
-      vFrete:parseFloat(vFrete.toFixed(2)),
-      vMerc: parseFloat(vMerc.toFixed(2)),
-      peso:Math.round(peso), pesoCubado:0, volume:0,
-      prod:PRODS[i%PRODS.length], pct:vFrete/vMerc*100, rkg:vFrete/peso,
-      tipo_op:op,
-      st_rem:"", st_tom:"",
-      // filiais — pelo CNPJ completo
-      fil_ori:  isFilialBe8(rem.cnpj)  ? nomeFilialBe8(rem.cnpj)  : "",
-      fil_dest: isFilialBe8(dest.cnpj) ? nomeFilialBe8(dest.cnpj) : "",
-    });
-    added++;
-  }
-  addLog(added+" CT-es demo carregados (mix 2025/2026 + 10 filiais).","ok");
-  refresh();
-}
 
 /* ══════════════════════════════════════════════
    FILTERS — MULTI-SELECT COM BUSCA
@@ -2394,23 +2357,6 @@ async function clearAll(){
 }
 
 /* ══════════════════════════════════════════════
-   LIMPAR APENAS MEMÓRIA LOCAL (sem tocar no Firebase)
-   Útil quando o Firebase está travando para permitir reimportação.
-══════════════════════════════════════════════ */
-function clearLocalOnly(){
-  if(!confirm("⚠️ Limpar APENAS a memória local desta sessão?\n\nOs dados no Firebase ficam intactos — ao recarregar a página, eles voltam.\n\nContinuar?")) return;
-  window.ALL=[]; FIL=[];
-  Object.keys(charts).forEach(k=>{try{charts[k].destroy();}catch(e){}}); charts={};
-  document.getElementById("dash").style.display="none";
-  document.getElementById("es").style.display="block";
-  document.getElementById("cte-ctr").textContent="0 CT-es";
-  document.getElementById("imp-count").textContent="0";
-  var istXml = document.getElementById("ist-xml"); if(istXml){ istXml.textContent="📄 CT-es: 0"; istXml.classList.remove("ok"); }
-  addLog("Memória local limpa (Firebase preservado).","warn");
-}
-window.clearLocalOnly = clearLocalOnly;
-
-/* ══════════════════════════════════════════════
    UTILS
 ══════════════════════════════════════════════ */
 function gb(arr,key){return(arr||[]).reduce((g,c)=>{const v=c[key]||"N/A";(g[v]=g[v]||[]).push(c);return g;},{});}
@@ -2454,7 +2400,7 @@ var fmtB=fmtBig;
 // O sistema atual usa renderAllPerfTables + pfSort + tabelas pf-tr / pf-fo / pf-fi / pf-ro.
 
 /* ════ DEMO TOOLTIP FIX ════ */
-window.DEMO_TOOLTIP="Carrega 63 CT-es simulados com múltiplas transportadoras, fornecedores, filiais e tipos de operação (VENDA, COMPRA, TRANSFERÊNCIA) para testar todas as funcionalidades sem precisar de arquivos reais. Os dados cobrem 7 meses com variações realistas de frete e mercadoria.";
+/* ════ DEMO (removido) ════ */
 
 /* ════ EXPOSE GLOBALS ════ */
 // window.repad já exposto acima pela function declaration
