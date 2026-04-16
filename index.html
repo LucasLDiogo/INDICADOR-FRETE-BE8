@@ -410,7 +410,8 @@ body::before{background:
     <button class="btn btn-s" onclick="loadDemoData()" title="Carrega 63 CT-es simulados com múltiplas transportadoras, fornecedores, filiais e tipos de operação (VENDA/COMPRA/TRANSFERÊNCIA) para testar todas as funcionalidades sem arquivos reais">⭐ Demo</button>
     <button class="btn btn-b" onclick="exportPDF()">📄 PDF</button>
     <button class="btn btn-w" onclick="exportInsightsPDF()">⭐ Insights PDF</button>
-    <button class="btn btn-d" onclick="clearAll()">🗑</button>
+    <button class="btn btn-d" onclick="clearAll()" title="Limpar TUDO — memória local + Firebase (lento com muitos dados)">🗑 Tudo</button>
+    <button class="btn btn-s" onclick="clearLocalOnly()" title="Limpar APENAS a tela — Firebase preservado. Use quando o 🗑 Tudo travar">🧹 Local</button>
   </div>
 </header>
 
@@ -721,7 +722,7 @@ body::before{background:
 
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import{getFirestore,collection,doc,setDoc,getDocs,deleteDoc,writeBatch}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import{getFirestore,collection,doc,setDoc,getDocs,deleteDoc,writeBatch,query,limit}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 const cfg={apiKey:"AIzaSyCofRClTS77tjLqo_R2m-9VIrgxHI02ojI",authDomain:"indicador-frete-be8.firebaseapp.com",projectId:"indicador-frete-be8",storageBucket:"indicador-frete-be8.firebasestorage.app",messagingSenderId:"787823147349",appId:"1:787823147349:web:e45f05e2dde93aa1e4d7dc"};
 try{
   const app=initializeApp(cfg);const db=getFirestore(app);
@@ -747,20 +748,55 @@ try{
   };
 
   window.fbClear=async(onProgress)=>{
+    // ─── Limpeza PAGINADA — evita travamento com coleções grandes (10k+ docs) ───
+    // Estratégia: carrega lotes de 500 via query(limit), deleta em writeBatch,
+    // repete até a coleção ficar vazia. Reporta progresso a cada batch.
     try{
-      const s=await getDocs(collection(db,"ctes"));
-      const docs=s.docs;const total=docs.length;
-      if(total===0){if(onProgress)onProgress(0,0);return true;}
-      let deleted=0;const BATCH_SIZE=400;
-      for(let i=0;i<docs.length;i+=BATCH_SIZE){
-        const batch=writeBatch(db);
-        docs.slice(i,i+BATCH_SIZE).forEach(d=>batch.delete(doc(db,"ctes",d.id)));
-        await batch.commit();
-        deleted+=Math.min(BATCH_SIZE,docs.length-i);
-        if(onProgress)onProgress(deleted,total);
+      const PAGE_SIZE = 500;      // docs por página
+      const BATCH_SIZE = 400;     // docs por writeBatch (limite Firestore = 500)
+      let deleted = 0;
+      let totalEstim = null;     // estimativa inicial de total
+
+      // Estimativa inicial (opcional) — serve só para a barra de progresso
+      if(onProgress) onProgress(0, 0, "Consultando Firebase...");
+
+      // 1ª página — serve também para saber se há algo
+      let snap = await getDocs(query(collection(db,"ctes"), limit(PAGE_SIZE)));
+      if(snap.empty){
+        if(onProgress) onProgress(0, 0, "Coleção já está vazia.");
+        return true;
       }
+
+      // Se há dados, assume que podem ser muitos — reporta de forma incremental
+      if(onProgress) onProgress(0, PAGE_SIZE, "Iniciando exclusão em lotes...");
+
+      while(!snap.empty){
+        const docs = snap.docs;
+        // Divide a página em batches menores (Firestore aceita até 500 por batch,
+        // usamos 400 para folga)
+        for(let i=0; i<docs.length; i+=BATCH_SIZE){
+          const batch = writeBatch(db);
+          const chunk = docs.slice(i, i+BATCH_SIZE);
+          chunk.forEach(d => batch.delete(doc(db,"ctes",d.id)));
+          await batch.commit();
+          deleted += chunk.length;
+          // Estimativa dinâmica: após primeiro batch, assume que ainda resta
+          // pelo menos 1 página (para a barra não dar 100% antes da hora)
+          const estTotal = Math.max(deleted + PAGE_SIZE, deleted);
+          if(onProgress) onProgress(deleted, estTotal, "Removendo lote "+deleted+"...");
+        }
+        // Próxima página — se vier vazia, acabou
+        snap = await getDocs(query(collection(db,"ctes"), limit(PAGE_SIZE)));
+      }
+
+      // Finalização
+      if(onProgress) onProgress(deleted, deleted, "Concluído: "+deleted+" documentos removidos.");
       return true;
-    }catch(e){console.error("fbClear:",e);return false;}
+    }catch(e){
+      console.error("fbClear error:", e);
+      if(onProgress) onProgress(0, 0, "ERRO: "+(e.message||e.code||"desconhecido"));
+      return false;
+    }
   };
 
   // ── Status visual ──
@@ -2268,13 +2304,17 @@ async function exportInsightsPDF(){
    CLEAR
 ══════════════════════════════════════════════ */
 async function clearAll(){
-  if(!confirm("⚠️ Isso vai remover TODOS os "+window.ALL.length+" CT-es da memória E do Firebase. Deseja continuar?")) return;
+  const n = window.ALL.length;
+  const msg = "⚠️ Isso vai remover TODOS os "+n+" CT-es da memória E do Firebase.\n\n"
+    + "Com 10.000+ CT-es a operação pode levar 1-3 minutos.\n"
+    + "Não feche a aba durante o processo.\n\nDeseja continuar?";
+  if(!confirm(msg)) return;
 
-  // Reset local state immediately
-  window.ALL=[];FIL=[];
-  Object.keys(charts).forEach(k=>{try{charts[k].destroy();}catch(e){}});charts={};
+  // Reset local state imediatamente (isso dá feedback instantâneo na UI)
+  window.ALL=[]; FIL=[];
+  Object.keys(charts).forEach(k=>{try{charts[k].destroy();}catch(e){}}); charts={};
 
-  // Show progress
+  // Mostra barra de progresso
   document.getElementById("prog").style.display="block";
   document.getElementById("pb").style.width="0%";
   document.getElementById("pb-l").textContent="Conectando ao Firebase para limpar...";
@@ -2285,24 +2325,61 @@ async function clearAll(){
 
   addLog("Iniciando limpeza do Firebase...","warn");
 
-  if(window.fbClear){
-    const ok = await fbClear(function(deleted, total){
-      const pct = total>0 ? (deleted/total*100) : 100;
-      document.getElementById("pb").style.width=pct+"%";
-      document.getElementById("pb-l").textContent="Removendo: "+deleted+"/"+total+" documentos...";
-      document.getElementById("p-tot").textContent=total;
-      document.getElementById("p-pro").textContent=deleted;
-    });
-    if(ok){
-      addLog("Firebase limpo com sucesso.","ok");
-    } else {
-      addLog("Erro ao limpar Firebase — verifique conexão.","err");
-    }
-  } else {
+  // Esconde dashboard
+  document.getElementById("dash").style.display="none";
+  document.getElementById("es").style.display="block";
+  document.getElementById("cte-ctr").textContent="0 CT-es";
+  document.getElementById("imp-count").textContent="0";
+  var istXml = document.getElementById("ist-xml"); if(istXml){ istXml.textContent="📄 CT-es: 0"; istXml.classList.remove("ok"); }
+  var uzb = document.getElementById("uz-xml-b"); if(uzb){ uzb.style.display="none"; uzb.textContent=""; }
+
+  if(!window.fbClear){
     addLog("Firebase offline — apenas memória local limpa.","warn");
+    document.getElementById("pb-l").textContent="Firebase offline — memória local limpa.";
+    return;
   }
 
-  // Hide progress and dashboard
+  // Timeout de segurança: se em 5 minutos não terminar, avisa o usuário
+  let finished = false;
+  const timeoutHandle = setTimeout(function(){
+    if(!finished){
+      addLog("⚠️ Limpeza demorando mais que o esperado — verifique o console (F12).","warn");
+      document.getElementById("pb-l").textContent="⚠️ Operação demorada. Aguarde ou recarregue a página.";
+    }
+  }, 5*60*1000);
+
+  try{
+    const ok = await fbClear(function(deleted, totalEst, message){
+      const pct = totalEst>0 ? (deleted/totalEst*100) : 0;
+      document.getElementById("pb").style.width = Math.min(pct,95)+"%";
+      document.getElementById("pb-l").textContent = message || ("Removendo: "+deleted+" / ~"+totalEst);
+      document.getElementById("p-tot").textContent = totalEst || "?";
+      document.getElementById("p-pro").textContent = deleted;
+      // Log ocasional (a cada 2000 docs) para não poluir
+      if(deleted>0 && deleted % 2000 === 0){
+        addLog("Firebase: "+deleted+" documentos removidos...","info");
+      }
+    });
+    finished = true;
+    clearTimeout(timeoutHandle);
+    if(ok){
+      document.getElementById("pb").style.width="100%";
+      document.getElementById("pb-l").textContent="✓ Firebase limpo com sucesso.";
+      addLog("✓ Firebase limpo com sucesso.","ok");
+    } else {
+      document.getElementById("pb-l").textContent="✗ Erro ao limpar Firebase. Verifique o console (F12).";
+      addLog("✗ Erro ao limpar Firebase. Abra o console do navegador (F12) para detalhes.","err");
+      alert("Erro ao limpar Firebase.\n\nPossíveis causas:\n• Sem conexão com a internet\n• Regras de segurança do Firestore bloqueando\n• Quota da Firebase excedida\n\nAbra o console do navegador (F12 → aba Console) para ver o erro exato.");
+    }
+  } catch(e){
+    finished = true;
+    clearTimeout(timeoutHandle);
+    console.error("clearAll catch:", e);
+    document.getElementById("pb-l").textContent="✗ Exceção: "+e.message;
+    addLog("Exceção durante limpeza: "+e.message,"err");
+  }
+
+  // Esconde barra após 3s
   setTimeout(function(){
     document.getElementById("prog").style.display="none";
     document.getElementById("pb").style.width="0%";
@@ -2311,17 +2388,27 @@ async function clearAll(){
     document.getElementById("p-pro").textContent="0";
     document.getElementById("p-dup").textContent="0";
     document.getElementById("p-err").textContent="0";
-  }, 1500);
+  }, 3000);
 
+  addLog("Todos os dados locais removidos. Pronto para nova importação.","warn");
+}
+
+/* ══════════════════════════════════════════════
+   LIMPAR APENAS MEMÓRIA LOCAL (sem tocar no Firebase)
+   Útil quando o Firebase está travando para permitir reimportação.
+══════════════════════════════════════════════ */
+function clearLocalOnly(){
+  if(!confirm("⚠️ Limpar APENAS a memória local desta sessão?\n\nOs dados no Firebase ficam intactos — ao recarregar a página, eles voltam.\n\nContinuar?")) return;
+  window.ALL=[]; FIL=[];
+  Object.keys(charts).forEach(k=>{try{charts[k].destroy();}catch(e){}}); charts={};
   document.getElementById("dash").style.display="none";
   document.getElementById("es").style.display="block";
   document.getElementById("cte-ctr").textContent="0 CT-es";
   document.getElementById("imp-count").textContent="0";
-  document.getElementById("ist-xml").textContent="📄 CT-es: 0";
-  document.getElementById("uz-xml-b").style.display="none";
-  document.getElementById("uz-xml-b").textContent="";
-  addLog("Todos os dados removidos. Pronto para nova importação.","warn");
+  var istXml = document.getElementById("ist-xml"); if(istXml){ istXml.textContent="📄 CT-es: 0"; istXml.classList.remove("ok"); }
+  addLog("Memória local limpa (Firebase preservado).","warn");
 }
+window.clearLocalOnly = clearLocalOnly;
 
 /* ══════════════════════════════════════════════
    UTILS
