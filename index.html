@@ -348,7 +348,7 @@ body::before{background:
           <div class="uz" id="uz-xml" onclick="document.getElementById('fi-xml').click()"
                ondrop="dropXML(event)" ondragover="dov(event)" ondragleave="e=>e.currentTarget.classList.remove('drag')">
             <div class="uz-icon">📂</div><div class="uz-title">XMLs CT-e</div>
-            <div class="uz-sub">Multi-select · até 12.000 arquivos</div>
+            <div class="uz-sub">Multi-select · até 60.000 arquivos</div>
             <input type="file" id="fi-xml" accept=".xml" multiple style="display:none" onchange="handleFiles(this.files)">
             <div class="uz-badge" id="uz-xml-b" style="display:none"></div>
           </div>
@@ -389,6 +389,12 @@ body::before{background:
     <div class="sh" style="margin-top:22px"><div class="st">Filtros</div><button class="btn btn-s" onclick="clearFilters()">✕ Limpar</button></div>
     <div class="fil-w">
       <div class="fil-g">
+        <div class="fl"><div class="fl-lbl">Ano</div>
+          <select class="fsel" id="f-ano" onchange="applyFilters()">
+            <option value="">Todos</option>
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+          </select></div>
         <div class="fl"><div class="fl-lbl">Mês</div><select class="fsel" id="f-mes" onchange="applyFilters()"><option value="">Todos</option></select></div>
         <div class="fl"><div class="fl-lbl">Trimestre</div><select class="fsel" id="f-tri" onchange="applyFilters()"><option value="">Todos</option></select></div>
         <div class="fl"><div class="fl-lbl">Tipo Operação</div>
@@ -614,31 +620,37 @@ body::before{background:
           <input type="text" class="sb" id="tbl-s" placeholder="🔍  Buscar em todos os campos..." oninput="filterTbl()">
           <button class="btn btn-s" onclick="exportExcel()">📊 Excel</button>
           <span id="tbl-cnt" style="font-size:11px;color:var(--text2)"></span>
+          <span style="font-size:10px;color:var(--text3);margin-left:auto">Peso em <strong style="color:var(--acc1)">toneladas</strong> · R$/kg em <strong style="color:var(--acc1)">R$/tonelada</strong></span>
         </div>
         <div class="tw">
           <table id="data-tbl">
             <thead><tr>
-              <th onclick="sortTbl('nCT')">CT-e</th>
               <th onclick="sortTbl('dhEmi')">Data</th>
-              <th onclick="sortTbl('tipo_op')">Operação</th>
-              <th onclick="sortTbl('tr_pad')">Transportadora</th>
-              <th onclick="sortTbl('fo_pad')">Fornecedor</th>
-              <th onclick="sortTbl('st_rem')">St.Rem</th>
-              <th onclick="sortTbl('st_tom')">St.Tom</th>
-              <th onclick="sortTbl('munIni')">Origem</th>
-              <th onclick="sortTbl('munFim')">Destino</th>
-              <th onclick="sortTbl('ufFim')">UF</th>
-              <th onclick="sortTbl('peso')">Peso(kg)</th>
-              <th onclick="sortTbl('vFrete')">Frete(R$)</th>
-              <th onclick="sortTbl('vMerc')">Mercadoria(R$)</th>
-              <th onclick="sortTbl('pct')">%</th>
-              <th onclick="sortTbl('rkg')">R$/kg</th>
+              <th onclick="sortTbl('nCT')">Nº CT-e</th>
+              <th onclick="sortTbl('chaveCte')">Chave CT-e</th>
+              <th onclick="sortTbl('cnpjEmit')">CNPJ Emitente</th>
+              <th onclick="sortTbl('nomeEmit')">Nome Emitente (Transp.)</th>
+              <th onclick="sortTbl('cnpjRem')">CNPJ Remetente</th>
+              <th onclick="sortTbl('nomeRem')">Nome Remetente</th>
+              <th onclick="sortTbl('cnpjDest')">CNPJ Destinatário</th>
+              <th onclick="sortTbl('nomeDest')">Nome Destinatário</th>
+              <th onclick="sortTbl('tomaInd')">Tomador (cód)</th>
+              <th onclick="sortTbl('tomaDesc')">Tomador (tipo)</th>
+              <th onclick="sortTbl('cnpjTomador')">CNPJ Tomador</th>
+              <th onclick="sortTbl('nomeTomador')">Nome Tomador</th>
+              <th onclick="sortTbl('peso')">Peso (ton)</th>
+              <th onclick="sortTbl('vFrete')">Valor Frete (R$)</th>
+              <th onclick="sortTbl('vMerc')">Valor Mercadoria (R$)</th>
+              <th onclick="sortTbl('munIni')">Cidade Origem</th>
+              <th onclick="sortTbl('ufIni')">UF Origem</th>
+              <th onclick="sortTbl('munFim')">Cidade Destino</th>
+              <th onclick="sortTbl('ufFim')">UF Destino</th>
               <th onclick="sortTbl('prod')">Produto</th>
-              <th onclick="sortTbl('fil_ori')">Filial Ori.</th>
-              <th onclick="sortTbl('fil_dest')">Filial Dest.</th>
-              <th onclick="sortTbl('tr_orig')">Transp.Original</th>
-              <th onclick="sortTbl('tr_raiz')">CNPJ Raiz Tr.</th>
-              <th onclick="sortTbl('fo_matr')">CNPJ Matriz Fo.</th>
+              <th onclick="sortTbl('tipo_op')">Operação</th>
+              <th onclick="sortTbl('fil_ori')">Filial Origem</th>
+              <th onclick="sortTbl('fil_dest')">Filial Destino</th>
+              <th onclick="sortTbl('pct')">% Frete</th>
+              <th onclick="sortTbl('rkg')">R$/Tonelada</th>
             </tr></thead>
             <tbody id="tbl-b"></tbody>
           </table>
@@ -795,11 +807,44 @@ const FL = {"07322382": {"nome": "BE8 PF/MARIALVA", "status": "FILIAL_BE8"}, "08
 // Runtime overrideable copies
 let tLookup = {...TL};
 
-// ── Raízes CNPJ das Filiais Be8 (regra de classificação de operação)
-const BE8_RAIZES = new Set(["07322382","08495847","08684263","11284311","33931174","63228664"]);
-function isFilialBe8(cnpjRaizStr){
-  var r=(cnpjRaizStr||"").replace(/[^0-9]/g,"").slice(0,8).padStart(8,"0");
-  return BE8_RAIZES.has(r);
+// ── Filiais Be8 — Mapa por CNPJ COMPLETO (14 dígitos) — separa PASSO FUNDO × MARIALVA
+// Esta tabela é a FONTE DA VERDADE para identificar filiais. Aplica-se TANTO para
+// filial origem (remetente) quanto para filial destino (destinatário).
+const BE8_FILIAIS = {
+  "07322382000119": "BE8 PASSO FUNDO",
+  "07322382000461": "BE8 MARIALVA",
+  "11284311000146": "BE8 SÃO PAULO",
+  "08495847000104": "BE8 PASSO FUNDO IMPOR/EXPOR",
+  "08684263000179": "BE8 NOVA MARILANDIA",
+  "30937909000131": "BE8 SANTO ANTONIO DO TAUA",
+  "33931174000127": "BE8 FLORIANO",
+  "56416732000111": "BE8 PASSO FUNDO ADM",
+  "63228664000122": "BE8 ALTO ARAGUAIA",
+  "08495847000368": "BE8 SOLEDADE IMPOR/EXPOR",
+};
+// CNPJ raiz das filiais (para fallback caso uma filial nova compartilhe a raiz)
+const BE8_RAIZES = new Set(Object.keys(BE8_FILIAIS).map(function(c){return c.slice(0,8);}));
+
+// Identifica se um CNPJ (completo OU raiz) pertence a alguma filial Be8.
+// Aceita string com/sem máscara. Prioriza match por CNPJ completo (14 dígitos).
+function isFilialBe8(cnpjStr){
+  var c = (cnpjStr||"").replace(/[^0-9]/g,"");
+  if(c.length>=14 && BE8_FILIAIS[c.slice(0,14)]) return true;
+  var raiz = c.slice(0,8).padStart(8,"0");
+  return BE8_RAIZES.has(raiz);
+}
+// Retorna o nome da filial Be8 a partir do CNPJ. Vazio se não for filial.
+function nomeFilialBe8(cnpjStr){
+  var c = (cnpjStr||"").replace(/[^0-9]/g,"");
+  if(c.length>=14 && BE8_FILIAIS[c.slice(0,14)]) return BE8_FILIAIS[c.slice(0,14)];
+  // Fallback: se a raiz é Be8 mas o CNPJ completo não está mapeado,
+  // retorna o nome de qualquer filial com a mesma raiz + sufixo "(filial)".
+  var raiz = c.slice(0,8);
+  if(BE8_RAIZES.has(raiz)){
+    var sample = Object.keys(BE8_FILIAIS).find(function(k){return k.slice(0,8)===raiz;});
+    return sample ? BE8_FILIAIS[sample]+" (outra filial)" : "BE8 ("+raiz+")";
+  }
+  return "";
 }
 let fLookup = {...FL};
 
@@ -873,6 +918,9 @@ function padTR(cnpj, nome){
   return tLookup[r] ? {nome:tLookup[r], raiz:r, ok:true} : {nome:nome||"Não informado", raiz:r, ok:false};
 }
 function padFO(cnpj, nome){
+  // Se é filial Be8, usa o nome COMPLETO da filial (PASSO FUNDO ≠ MARIALVA)
+  const fil = nomeFilialBe8(cnpj);
+  if(fil) return { nome: fil, raiz: cnpjRaiz(cnpj), ok: true, isFilial: true };
   // Lookup apenas para nome — status não é mais usado para classificação
   const m = cnpjRaiz(cnpj);
   const entry = fLookup[m];
@@ -880,6 +928,7 @@ function padFO(cnpj, nome){
     nome: entry ? entry.nome : (nome||"Não informado"),
     raiz: m,
     ok:   !!entry,
+    isFilial: false,
   };
 }
 function getNomeForn(cnpj, nome){
@@ -923,9 +972,11 @@ function loadAux(file,tipo){
           const nm=String(r["NOME REDU"]||r["NOME_REDU"]||"").trim();
           if(raiz&&raiz!=="00000000"&&nm){tLookup[raiz]=nm;n++;}
         });
-        document.getElementById("uz-tr").classList.add("loaded");
-        document.getElementById("b-tr").textContent="🚛 Transportadoras: "+n+" carregadas";
-        document.getElementById("b-tr").classList.add("ok");
+        document.getElementById("uz-tr")?.classList.add("loaded");
+        var bTr=document.getElementById("uz-tr-b");
+        if(bTr){ bTr.textContent=n+" carregadas"; bTr.style.display="inline-block"; }
+        var istTr=document.getElementById("ist-tr");
+        if(istTr){ istTr.textContent="🚛 Transp: "+n+" carregadas"; istTr.classList.add("ok"); }
         addLog("Base Transportadoras atualizada: "+n+" registros.","ok");
         if(window.ALL.length) repad();
       }else{
@@ -936,9 +987,11 @@ function loadAux(file,tipo){
           const st=String(r["STATUS"]||"").trim();
           if(matr&&matr!=="00000000"&&nm){fLookup[matr]={nome:nm,status:st};n++;}
         });
-        document.getElementById("uz-fo").classList.add("loaded");
-        document.getElementById("b-fo").textContent="🏭 Fornecedores: "+n+" carregados";
-        document.getElementById("b-fo").classList.add("ok");
+        document.getElementById("uz-fo")?.classList.add("loaded");
+        var bFo=document.getElementById("uz-fo-b");
+        if(bFo){ bFo.textContent=n+" carregados"; bFo.style.display="inline-block"; }
+        var istFo=document.getElementById("ist-fo");
+        if(istFo){ istFo.textContent="🏭 Forn: "+n+" carregados"; istFo.classList.add("ok"); }
         addLog("Base Fornecedores atualizada: "+n+" registros.","ok");
         if(window.ALL.length) repad();
       }
@@ -955,25 +1008,59 @@ function normalizeCTE(c){
   var peso   = c.peso || 0;
   var pct    = vMerc > 0 ? vFrete/vMerc*100 : (c.pct || c.pctFrete || 0);
   var rkg    = peso  > 0 ? vFrete/peso       : (c.rkg || c.rPorKg   || 0);
+  var cnpjRem_ = c.cnpjRem  || c.cnpjForn || "";
+  var cnpjDest_= c.cnpjDest || c.cnpjTom  || "";
+  var cnpjEmit_= c.cnpjEmit || c.cnpjTr   || c.cnpjTransp || "";
+  // Reaplica regra de filial pelo CNPJ COMPLETO (separa PASSO FUNDO × MARIALVA)
+  var fil_ori  = isFilialBe8(cnpjRem_)  ? nomeFilialBe8(cnpjRem_)  : (c.fil_ori || "");
+  var fil_dest = isFilialBe8(cnpjDest_) ? nomeFilialBe8(cnpjDest_) : (c.fil_dest || "");
+  // Tomador: se o CT-e antigo não tem, assume Destinatário (toma=3 — caso mais comum)
+  var tomaInd = c.tomaInd != null ? String(c.tomaInd) : "";
+  var TOMA_LABELS = ["Remetente","Expedidor","Recebedor","Destinatário","Outros"];
+  var tomaDesc = c.tomaDesc || (TOMA_LABELS[parseInt(tomaInd,10)] || "Não informado");
+  var cnpjTomador = c.cnpjTomador || "";
+  var nomeTomador = c.nomeTomador || "";
+  if(!cnpjTomador){
+    if(tomaInd==="0"){ cnpjTomador=cnpjRem_; nomeTomador=c.nomeRem||c.fo_orig||""; }
+    else if(tomaInd==="3" || !tomaInd){ cnpjTomador=cnpjDest_; nomeTomador=c.nomeDest||c.destinatario||c.dest_orig||""; }
+  }
   return Object.assign({}, c, {
     vMerc: vMerc, pct: pct, rkg: rkg,
     tr_orig:  c.tr_orig   || c.transp_orig   || c.transportadora || "",
     tr_pad:   c.tr_pad    || c.transportadora_pad || c.transportadora || "",
-    tr_raiz:  c.tr_raiz   || c.transp_cnpj_raiz || cnpjRaiz(c.cnpjTransp||c.cnpjTr||""),
+    tr_raiz:  c.tr_raiz   || c.transp_cnpj_raiz || cnpjRaiz(cnpjEmit_),
     tr_ok:    c.tr_ok     != null ? c.tr_ok : (c.transp_padronizado || false),
+    cnpjEmit: cnpjEmit_,
+    cnpjTr:   c.cnpjTr || cnpjEmit_,
+    nomeEmit: c.nomeEmit || c.tr_orig || c.transp_orig || "",
     fo_orig:  c.fo_orig   || c.fornecedor_orig || c.fornecedor || "",
     fo_pad:   c.fo_pad    || c.fornecedor_pad  || c.fornecedor || "",
-    fo_matr:  c.fo_matr   || c.forn_cnpj_matriz || cnpjRaiz(c.cnpjForn||c.cnpjRem||""),
-    st_rem:   c.st_rem    || c.status_rem || "NAO MAPEADO",
+    fo_matr:  c.fo_matr   || c.forn_cnpj_matriz || cnpjRaiz(cnpjRem_),
+    nomeRem:  c.nomeRem   || c.fo_orig || "",
+    cnpjRem:  cnpjRem_,
+    cnpjExped:c.cnpjExped || "",
+    nomeExped:c.nomeExped || "",
+    cnpjReceb:c.cnpjReceb || "",
+    nomeReceb:c.nomeReceb || "",
+    cnpjDest: cnpjDest_,
+    cnpjTom:  cnpjDest_,   // alias compatibilidade
+    nomeDest: c.nomeDest  || c.destinatario || c.dest_orig || "",
     dest_orig:c.dest_orig || c.destinatario || "",
-    cnpjTom:  c.cnpjTom   || c.cnpjDest || "",
-    st_tom:   c.st_tom    || c.status_tom || "NAO MAPEADO",
-    tipo_op:  c.tipo_op   || c.tipo_operacao || classOp(c.cnpjRem||c.cnpjForn||"", c.cnpjTom||c.cnpjDest||"") || "OUTROS",
-    fil_ori:  c.fil_ori   || c.filial_ori || "",
-    fil_dest: c.fil_dest  || c.filial_dest || "",
-    prod:     c.prod      || c.mercadoriaTipo || "Nao informado",
-    cnpjRem:  c.cnpjRem   || c.cnpjForn || "",
-    rota:     c.rota      || ((c.munIni||"")+"/"+(c.ufIni||"")+" -> "+(c.munFim||"")+"/"+(c.ufFim||"")),
+    destinatario: c.destinatario || c.nomeDest || c.dest_orig || "",
+    st_rem:   "",
+    st_tom:   "",
+    tipo_op:  classOp(cnpjRem_, cnpjDest_) || c.tipo_op || c.tipo_operacao || "OUTROS",
+    fil_ori:  fil_ori,
+    fil_dest: fil_dest,
+    prod:     c.prod      || c.mercadoriaTipo || "Não informado",
+    pesoCubado: c.pesoCubado || 0,
+    volume:     c.volume    || 0,
+    tomaInd:    tomaInd,
+    tomaDesc:   tomaDesc,
+    cnpjTomador: cnpjTomador,
+    nomeTomador: nomeTomador,
+    rota:     c.rota      || ((c.munIni||"")+"/"+(c.ufIni||"")+" → "+(c.munFim||"")+"/"+(c.ufFim||"")),
+    ano:      c.ano       || (c.dhEmi ? new Date(c.dhEmi).getFullYear().toString() : ""),
   });
 }
 window.normalizeCTE = normalizeCTE;
@@ -982,9 +1069,9 @@ function repad(){
   window.ALL=window.ALL.map(function(c){
     var cnpjRem_=c.cnpjRem||c.cnpjForn||"";
     var cnpjTom_=c.cnpjTom||c.cnpjDest||"";
-    var tr=padTR(c.tr_raiz||c.cnpjTr||"", c.tr_orig||"");
-    var rem=padFO(cnpjRem_, c.fo_orig||"");
-    var tom=padFO(cnpjTom_, c.dest_orig||"");
+    var tr=padTR(c.cnpjEmit||c.cnpjTr||c.tr_raiz||"", c.nomeEmit||c.tr_orig||"");
+    var rem=padFO(cnpjRem_, c.nomeRem||c.fo_orig||"");
+    var tom=padFO(cnpjTom_, c.nomeDest||c.dest_orig||"");
     var op=classOp(cnpjRem_, cnpjTom_);
     var vMerc=c.vMerc||c.vMercadoria||0;
     var vFrete=c.vFrete||0;
@@ -993,11 +1080,17 @@ function repad(){
     var rkg=peso>0?vFrete/peso:(c.rkg||0);
     return Object.assign({},c,{
       tr_pad:tr.nome||"", tr_ok:!!tr.ok, tr_raiz:tr.raiz||c.tr_raiz||"",
+      cnpjEmit:c.cnpjEmit||c.cnpjTr||"",
+      nomeEmit:c.nomeEmit||c.tr_orig||"",
       fo_pad:rem.nome||"", st_rem:"", fo_matr:rem.raiz||c.fo_matr||"",
+      nomeRem:c.nomeRem||c.fo_orig||"",
+      nomeDest:c.nomeDest||c.dest_orig||c.destinatario||"",
+      cnpjDest:cnpjTom_,
       st_tom:"", tipo_op:op,
       vMerc:vMerc, pct:pct, rkg:rkg,
-      fil_ori:isFilialBe8(cnpjRem_)?rem.nome:(c.fil_ori||""),
-      fil_dest:isFilialBe8(cnpjTom_)?tom.nome:(c.fil_dest||""),
+      // Identifica filial pelo CNPJ COMPLETO — separa PASSO FUNDO × MARIALVA
+      fil_ori:  isFilialBe8(cnpjRem_) ? nomeFilialBe8(cnpjRem_) : "",
+      fil_dest: isFilialBe8(cnpjTom_) ? nomeFilialBe8(cnpjTom_) : "",
     });
   });
   addLog("Repadronização: "+window.ALL.length+" CT-es atualizados.","ok");
@@ -1014,43 +1107,88 @@ function dov(e){e.preventDefault();document.getElementById("uz-xml").classList.a
 function dropXML(e){e.preventDefault();document.getElementById("uz-xml").classList.remove("drag");handleFiles(e.dataTransfer.files);}
 
 /* ══════════════════════════════════════════════
-   FILE PROCESSING
+   FILE PROCESSING — suporta até 60.000 XMLs em lote
+   ──────────────────────────────────────────────
+   • Batch de 100 arquivos paralelos
+   • Save no Firebase em background (não bloqueia parse)
+   • Repad/refresh apenas no final (evita renderizar a cada batch)
 ══════════════════════════════════════════════ */
 async function handleFiles(files){
   if(!files||!files.length) return;
   const xmls=Array.from(files).filter(f=>f.name.toLowerCase().endsWith(".xml"));
   if(!xmls.length){addLog("Nenhum XML.","warn");return;}
+  if(xmls.length>60000){
+    if(!confirm("⚠️ Você selecionou "+xmls.length+" arquivos. O limite recomendado é 60.000. Continuar mesmo assim?")) return;
+  }
   document.getElementById("prog").style.display="block";
-  let tot=xmls.length,pro=0,dup=0,err=0;
+  let tot=xmls.length, pro=0, dup=0, err=0;
   document.getElementById("p-tot").textContent=tot;
-  const B=50;
+  // Index existente (Set) para detecção O(1) de duplicatas
+  const existingChaves = new Set(window.ALL.map(c=>c.chaveCte));
+  const newCtes = [];
+  const B = tot > 5000 ? 100 : 50;  // batches maiores quando há muito volume
+  const t0 = Date.now();
   for(let i=0;i<xmls.length;i+=B){
-    await Promise.all(xmls.slice(i,i+B).map(async f=>{
+    const slice = xmls.slice(i,i+B);
+    await Promise.all(slice.map(async f=>{
       try{
         const c=parseXML(await f.text());
-        if(!c){err++;addLog("Erro parse: "+f.name,"err");return;}
-        if(window.ALL.find(x=>x.chaveCte===c.chaveCte)){dup++;addLog("Dup: CT-e "+c.nCT,"warn");return;}
-        window.ALL.push(c);pro++;
-        if(window.fbSave) fbSave(c);
-        addLog("✓ CT-e "+c.nCT+" | "+c.tr_pad+" | "+c.tipo_op+" | R$ "+fmt(c.vFrete),"ok");
-      }catch(e){err++;addLog("Erro: "+f.name+" — "+e.message,"err");}
+        if(!c){err++;return;}
+        if(existingChaves.has(c.chaveCte)){dup++;return;}
+        existingChaves.add(c.chaveCte);
+        window.ALL.push(c);
+        newCtes.push(c);
+        pro++;
+      }catch(e){err++;}
     }));
     const done=Math.min(i+B,xmls.length);
     document.getElementById("pb").style.width=(done/tot*100)+"%";
-    document.getElementById("pb-l").textContent="Processando "+done+"/"+tot+"...";
+    const elapsed = ((Date.now()-t0)/1000).toFixed(1);
+    const rate = done>0 ? (done/(elapsed||1)).toFixed(0) : "0";
+    document.getElementById("pb-l").textContent="Processando "+done+"/"+tot+" ("+rate+" arq/s · "+elapsed+"s)";
     document.getElementById("p-pro").textContent=pro;
     document.getElementById("p-dup").textContent=dup;
     document.getElementById("p-err").textContent=err;
-    await new Promise(r=>setTimeout(r,10));
+    await new Promise(r=>setTimeout(r,5));
   }
-  document.getElementById("pb-l").textContent="Concluído: "+pro+" novos, "+dup+" dup, "+err+" erros.";
-  document.getElementById("b-xml").textContent="📄 CT-es: "+window.ALL.length;
-  addLog("--- Importação: "+pro+" novos CT-es ---","ok");
+  // Salva em Firebase em background — não bloqueia a UI
+  if(window.fbSave && newCtes.length){
+    addLog("Salvando "+newCtes.length+" CT-es no Firebase em background...","info");
+    (async function(){
+      const FB_BATCH = 50;
+      let savedFB = 0;
+      for(let j=0;j<newCtes.length;j+=FB_BATCH){
+        await Promise.all(newCtes.slice(j,j+FB_BATCH).map(c=>fbSave(c).catch(()=>false)));
+        savedFB += Math.min(FB_BATCH, newCtes.length-j);
+      }
+      addLog("Firebase: "+savedFB+" CT-es salvos.","ok");
+    })();
+  }
+  document.getElementById("pb-l").textContent="Concluído: "+pro+" novos · "+dup+" dup · "+err+" erros · "+((Date.now()-t0)/1000).toFixed(1)+"s";
+  var uzBadge=document.getElementById("uz-xml-b");
+  if(uzBadge){ uzBadge.textContent="📄 "+window.ALL.length+" CT-es"; uzBadge.style.display="inline-block"; }
+  var istXml=document.getElementById("ist-xml");
+  if(istXml){ istXml.textContent="📄 CT-es: "+window.ALL.length; istXml.classList.add("ok"); }
+  addLog("--- Importação: "+pro+" novos CT-es em "+((Date.now()-t0)/1000).toFixed(1)+"s ---","ok");
   refresh();
 }
 
 /* ══════════════════════════════════════════════
-   XML PARSER CT-e 4.00
+   XML PARSER CT-e 4.00 — captura completa
+   ──────────────────────────────────────────────
+   Campos extraídos:
+   • Identificação:    chaveCte, nCT, dhEmi, mesNum, trimestre, ano
+   • Emitente:         cnpjEmit, nomeEmit (transportadora)
+   • Remetente:        cnpjRem, nomeRem
+   • Expedidor:        cnpjExped, nomeExped
+   • Recebedor:        cnpjReceb, nomeReceb
+   • Destinatário:     cnpjDest (tomCNPJ), nomeDest
+   • Tomador (toma):   tomaInd (0..4), tomaDesc, cnpjTomador, nomeTomador
+                       0=Remetente 1=Expedidor 2=Recebedor 3=Destinatário 4=Outros
+   • Peso bruto:       infQ tpMed=PESO BRUTO/PESO BC (fallback: cubado/volume)
+   • Financeiro:       vTPrest (frete), vCarga (mercadoria)
+   • Localização:      munIni/ufIni (origem), munFim/ufFim (destino)
+   • Produto:          proPred
 ══════════════════════════════════════════════ */
 function parseXML(txt){
   try{
@@ -1059,85 +1197,232 @@ function parseXML(txt){
     const g=(tag,ctx)=>{const el=(ctx||doc).getElementsByTagNameNS(NS,tag)[0];return el?(el.textContent||"").trim():"";};
     const inf=doc.getElementsByTagNameNS(NS,"infCte")[0];
     if(!inf) return null;
-    const chaveCte=inf.getAttribute("Id")||g("chCTe");
+
+    const chaveCte=(inf.getAttribute("Id")||g("chCTe")||"").replace(/^CTe/i,"");
     const nCT=g("nCT"),dhEmi=g("dhEmi");
     const d=dhEmi?new Date(dhEmi):new Date();
+    const ano=d.getFullYear().toString();
     const mesNum=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
     const trimestre=`T${Math.ceil((d.getMonth()+1)/3)}/${d.getFullYear()}`;
+
+    // ── Localização (origem/destino do CT-e) ──
     const munIni=g("xMunIni"),ufIni=g("UFIni"),munFim=g("xMunFim"),ufFim=g("UFFim");
     const rota=`${munIni}/${ufIni} → ${munFim}/${ufFim}`;
-    // Emit
+
+    // ── Emitente (transportadora) ──
     const em=doc.getElementsByTagNameNS(NS,"emit")[0];
-    const tr_orig=em?g("xNome",em):"",cnpjTr=em?g("CNPJ",em):"";
-    const trI=padTR(cnpjTr,tr_orig);
-    // Rem
+    const nomeEmit = em ? g("xNome",em) : "";
+    const cnpjEmit = em ? g("CNPJ",em) : "";
+    const trI = padTR(cnpjEmit, nomeEmit);
+
+    // ── Remetente ──
     const re=doc.getElementsByTagNameNS(NS,"rem")[0];
-    const fo_orig=re?(g("xFant",re)||g("xNome",re)):"",cnpjRem=re?g("CNPJ",re):"";
-    const reI=padFO(cnpjRem,fo_orig);
-    // Dest
+    const nomeRem = re ? (g("xNome",re) || g("xFant",re)) : "";
+    const cnpjRem = re ? (g("CNPJ",re) || g("CPF",re)) : "";
+    const reI = padFO(cnpjRem, nomeRem);
+
+    // ── Expedidor (opcional) ──
+    const ex=doc.getElementsByTagNameNS(NS,"exped")[0];
+    const nomeExped = ex ? g("xNome",ex) : "";
+    const cnpjExped = ex ? (g("CNPJ",ex) || g("CPF",ex)) : "";
+
+    // ── Recebedor (opcional) ──
+    const rc=doc.getElementsByTagNameNS(NS,"receb")[0];
+    const nomeReceb = rc ? g("xNome",rc) : "";
+    const cnpjReceb = rc ? (g("CNPJ",rc) || g("CPF",rc)) : "";
+
+    // ── Destinatário ──
     const de=doc.getElementsByTagNameNS(NS,"dest")[0];
-    const dest_orig=de?g("xNome",de):"",cnpjTom=de?(g("CNPJ",de)||g("CPF",de)):"";
-    const tomI=padFO(cnpjTom,dest_orig);
-    // Financeiro
-    const vFrete=parseFloat(g("vTPrest"))||0,vMerc=parseFloat(g("vCarga"))||0;
-    let peso=0;
-    for(const q of Array.from(doc.getElementsByTagNameNS(NS,"infQ"))){
-      if((g("tpMed",q)||"").toUpperCase().includes("PESO")){peso=parseFloat(g("qCarga",q))||0;break;}
+    const nomeDest = de ? g("xNome",de) : "";
+    const cnpjDest = de ? (g("CNPJ",de) || g("CPF",de)) : "";
+    const tomI = padFO(cnpjDest, nomeDest);
+
+    // ── Tomador do serviço (campo <toma>) ──
+    // O CT-e v4.00 pode ter <toma3> ou <toma4>. O elemento <toma> sempre indica:
+    //   0=Remetente · 1=Expedidor · 2=Recebedor · 3=Destinatário · 4=Outros
+    const TOMA_LABELS = ["Remetente","Expedidor","Recebedor","Destinatário","Outros"];
+    const tomaInd = g("toma");
+    const tomaDesc = TOMA_LABELS[parseInt(tomaInd,10)] || "Não informado";
+    let cnpjTomador="", nomeTomador="";
+    switch(tomaInd){
+      case "0": cnpjTomador=cnpjRem;   nomeTomador=nomeRem;   break;
+      case "1": cnpjTomador=cnpjExped; nomeTomador=nomeExped; break;
+      case "2": cnpjTomador=cnpjReceb; nomeTomador=nomeReceb; break;
+      case "3": cnpjTomador=cnpjDest;  nomeTomador=nomeDest;  break;
+      case "4": {
+        // toma=4: dados do tomador vêm dentro do bloco <toma4>
+        const t4 = doc.getElementsByTagNameNS(NS,"toma4")[0];
+        if(t4){
+          cnpjTomador = g("CNPJ",t4) || g("CPF",t4) || "";
+          nomeTomador = g("xNome",t4) || "Outros";
+        }
+        break;
+      }
+      default: cnpjTomador=cnpjDest; nomeTomador=nomeDest; // fallback seguro
     }
-    const prod=g("proPred")||"Não informado";
-    const pct=vMerc>0?vFrete/vMerc*100:0,rkg=peso>0?vFrete/peso:0;
-    const tipo_op=classOp(cnpjRem, cnpjTom);
-    return{
-      chaveCte,nCT,dhEmi,mesNum,trimestre,ano:d.getFullYear().toString(),
-      munIni,ufIni,munFim,ufFim,rota,
-      tr_orig,cnpjTr,tr_pad:trI.nome,tr_raiz:trI.raiz,tr_ok:trI.ok,
-      fo_orig,cnpjRem,fo_pad:reI.nome,st_rem:"",fo_matr:reI.raiz||"",
-      dest_orig,cnpjTom,destinatario:tomI.nome,st_tom:"",
-      cidadeDest:de?g("xMun",de):"",ufDest:de?g("UF",de):"",
-      vFrete,vMerc,peso,prod,pct,rkg,tipo_op,
-      fil_ori:isFilialBe8(cnpjRem)?reI.nome:"",
-      fil_dest:isFilialBe8(cnpjTom)?tomI.nome:"",
+    // Padroniza o nome do tomador caso seja filial Be8 ou esteja na base
+    const tomadorPad = padFO(cnpjTomador, nomeTomador);
+    nomeTomador = tomadorPad.nome || nomeTomador;
+
+    // ── Financeiro ──
+    const vFrete = parseFloat(g("vTPrest")) || 0;
+    const vMerc  = parseFloat(g("vCarga"))  || 0;
+
+    // ── Peso (preferencial: PESO BRUTO; fallback: cubado/volume) ──
+    let peso=0, pesoCub=0, volume=0;
+    for(const q of Array.from(doc.getElementsByTagNameNS(NS,"infQ"))){
+      const tpMed = (g("tpMed",q)||"").toUpperCase();
+      const qCarga = parseFloat(g("qCarga",q))||0;
+      if(tpMed.includes("PESO BRUTO") || tpMed==="PESO" || tpMed.includes("PESO BC")){
+        if(qCarga>0 && !peso) peso = qCarga;
+      } else if(tpMed.includes("CUBADO") || tpMed.includes("PESO CUBADO")){
+        pesoCub = qCarga;
+      } else if(tpMed.includes("VOLUME") || tpMed.includes("CUBAGEM")){
+        volume = qCarga;
+      }
+    }
+    // Se peso bruto zerado, usa cubado e na sequência volume
+    if(!peso && pesoCub) peso = pesoCub;
+    if(!peso && volume)  peso = volume;
+
+    const prod = g("proPred") || "Não informado";
+    const pct  = vMerc>0 ? vFrete/vMerc*100 : 0;
+    const rkg  = peso>0  ? vFrete/peso       : 0;
+    const tipo_op = classOp(cnpjRem, cnpjDest);
+
+    return {
+      // identificação
+      chaveCte, nCT, dhEmi, mesNum, trimestre, ano,
+      // localização
+      munIni, ufIni, munFim, ufFim, rota,
+      // emitente (transportadora)
+      tr_orig: nomeEmit, cnpjTr: cnpjEmit, cnpjEmit: cnpjEmit, nomeEmit: nomeEmit,
+      tr_pad: trI.nome, tr_raiz: trI.raiz, tr_ok: trI.ok,
+      // remetente
+      fo_orig: nomeRem, cnpjRem: cnpjRem, nomeRem: nomeRem,
+      fo_pad: reI.nome, fo_matr: reI.raiz || "",
+      // expedidor / recebedor
+      cnpjExped: cnpjExped, nomeExped: nomeExped,
+      cnpjReceb: cnpjReceb, nomeReceb: nomeReceb,
+      // destinatário (mantém alias cnpjTom para compatibilidade)
+      dest_orig: nomeDest, cnpjDest: cnpjDest, cnpjTom: cnpjDest,
+      destinatario: tomI.nome, nomeDest: nomeDest,
+      cidadeDest: de ? g("xMun",de) : "",
+      ufDest:     de ? g("UF",de)   : "",
+      // tomador
+      tomaInd: tomaInd || "", tomaDesc: tomaDesc,
+      cnpjTomador: cnpjTomador, nomeTomador: nomeTomador,
+      // financeiro
+      vFrete: vFrete, vMerc: vMerc, peso: peso, pesoCubado: pesoCub, volume: volume,
+      prod: prod, pct: pct, rkg: rkg, tipo_op: tipo_op,
+      // compatibilidade
+      st_rem: "", st_tom: "",
+      // filiais Be8 (CNPJ completo identifica a filial certa)
+      fil_ori:  isFilialBe8(cnpjRem)  ? nomeFilialBe8(cnpjRem)  : "",
+      fil_dest: isFilialBe8(cnpjDest) ? nomeFilialBe8(cnpjDest) : "",
     };
-  }catch(e){console.error(e);return null;}
+  }catch(e){console.error("parseXML error:",e);return null;}
 }
 
 /* ══════════════════════════════════════════════
-   DEMO DATA
+   DEMO DATA — atualizada para regras v2:
+   • CNPJ completo (14 dígitos) para cada filial Be8
+   • Captura tomador via <toma> (0..4)
+   • Cobertura 2025 e 2026
 ══════════════════════════════════════════════ */
 function loadDemoData(){
-  const TRS=[["L CARLOS","32285535000142"],["AG BRASIL","17339465000101"],["ALFA","82110818000121"],["BRINGER","94001641000101"],["RODONAVES","44914992000101"]];
-  const FOS=[["07322382000100","FILIAL"],["33931174000100","FILIAL"],["08684263000100","FILIAL"],["30937909000131","FORNECEDOR"],["76093731000100","FORNECEDOR"],["10629776000100","IMPOR/EXPOR"]];
-  const DESTS=[["Barcarena","PA"],["Passo Fundo","RS"],["São Paulo","SP"],["Curitiba","PR"],["Manaus","AM"],["Floriano","PI"]];
-  const ORIS=[["Santo Antonio do Taua","PA"],["Marialva","PR"],["Passo Fundo","RS"],["Nova Marilandia","MT"]];
-  const PRODS=["GLICERINA","SOJA","MILHO","ÓLEO DE PALMA","FARELO","RAÇÃO"];
-  const MESES=["2025-09","2025-10","2025-11","2025-12","2026-01","2026-02","2026-03"];
+  const TRS=[
+    ["L CARLOS",        "32285535000142"],
+    ["AG BRASIL",       "17339465000101"],
+    ["ALFA",            "82110818000121"],
+    ["BRINGER",         "94001641000101"],
+    ["RODONAVES",       "44914992000101"],
+  ];
+  // Mistura de filiais Be8 (com CNPJ completo) + alguns externos
+  const REM_LIST=[
+    {cnpj:"07322382000119",nome:"BE8 PASSO FUNDO",          tipo:"FILIAL"},
+    {cnpj:"07322382000461",nome:"BE8 MARIALVA",             tipo:"FILIAL"},
+    {cnpj:"33931174000127",nome:"BE8 FLORIANO",             tipo:"FILIAL"},
+    {cnpj:"08684263000179",nome:"BE8 NOVA MARILANDIA",      tipo:"FILIAL"},
+    {cnpj:"30937909000131",nome:"BE8 SANTO ANTONIO DO TAUA",tipo:"FILIAL"},
+    {cnpj:"63228664000122",nome:"BE8 ALTO ARAGUAIA",        tipo:"FILIAL"},
+    {cnpj:"76093731000148",nome:"COPACOL",                  tipo:"EXTERNO"},
+    {cnpj:"10629776000175",nome:"ZIEHL ABEGG IMPORTACAO",   tipo:"EXTERNO"},
+  ];
+  const DEST_LIST=[
+    {cnpj:"08495847000104",nome:"BE8 PASSO FUNDO IMPOR/EXPOR",tipo:"FILIAL"},
+    {cnpj:"08495847000368",nome:"BE8 SOLEDADE IMPOR/EXPOR",   tipo:"FILIAL"},
+    {cnpj:"11284311000146",nome:"BE8 SÃO PAULO",              tipo:"FILIAL"},
+    {cnpj:"56416732000111",nome:"BE8 PASSO FUNDO ADM",        tipo:"FILIAL"},
+    {cnpj:"00993264000189",nome:"INTEGRADA",                  tipo:"EXTERNO"},
+    {cnpj:"02916265000160",nome:"JBS S/A",                    tipo:"EXTERNO"},
+  ];
+  const ORIS=[["Santo Antonio do Taua","PA"],["Marialva","PR"],["Passo Fundo","RS"],["Nova Marilandia","MT"],["Floriano","PI"],["Alto Araguaia","MT"]];
+  const DESTS=[["Barcarena","PA"],["Passo Fundo","RS"],["São Paulo","SP"],["Curitiba","PR"],["Manaus","AM"],["Soledade","RS"]];
+  const PRODS=["GLICERINA","SOJA","MILHO","ÓLEO DE PALMA","FARELO","BIODIESEL","RAÇÃO"];
+  // Cobertura 2025 + 2026
+  const MESES=["2025-08","2025-09","2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04"];
+  const TOMA_LABELS=["Remetente","Expedidor","Recebedor","Destinatário","Outros"];
   let added=0;
   for(let i=0;i<63;i++){
-    const chaveCte="demo"+String(i).padStart(10,"0");
+    const chaveCte="demo"+String(i).padStart(40,"0");
     if(window.ALL.find(x=>x.chaveCte===chaveCte)) continue;
-    const tr=TRS[i%TRS.length], fo=FOS[i%FOS.length], de=DESTS[i%DESTS.length], or=ORIS[i%ORIS.length];
-    const mes=MESES[Math.floor(i/9)], day=String((i%28)+1).padStart(2,"0");
+    const tr=TRS[i%TRS.length];
+    const rem=REM_LIST[i%REM_LIST.length];
+    const dest=DEST_LIST[i%DEST_LIST.length];
+    const or=ORIS[i%ORIS.length];
+    const de=DESTS[i%DESTS.length];
+    const mes=MESES[Math.floor(i/7)%MESES.length];
+    const day=String((i%28)+1).padStart(2,"0");
     const dhEmi=`${mes}-${day}T10:00:00-03:00`, dObj=new Date(dhEmi);
     const peso=15000+Math.random()*15000, vFrete=2500+Math.random()*2000, vMerc=50000+Math.random()*50000;
-    const trI=padTR(tr[1],tr[0]), remI=padFO(fo[0],fo[0]);
-    const tomCNPJ=fo[1]==="FILIAL"?"30937909000131":"33931174000100";
-    const tomI=padFO(tomCNPJ,"DESTINO");
-    const op=classOp(fo[0], tomCNPJ);
+    const trI=padTR(tr[1],tr[0]);
+    const remI=padFO(rem.cnpj,rem.nome);
+    const tomI=padFO(dest.cnpj,dest.nome);
+    const op=classOp(rem.cnpj, dest.cnpj);
+    // Tomador: maior parte dos CT-es reais usa toma=3 (Destinatário)
+    // Variamos para demonstrar a regra
+    const tomaInd = String(i%5);
+    let cnpjTomador="", nomeTomador="";
+    if(tomaInd==="0"){ cnpjTomador=rem.cnpj;  nomeTomador=remI.nome; }
+    else if(tomaInd==="3"){ cnpjTomador=dest.cnpj; nomeTomador=tomI.nome; }
+    else { cnpjTomador=dest.cnpj; nomeTomador=tomI.nome; } // fallback
     window.ALL.push({
-      chaveCte,nCT:String(1700+i),dhEmi,
-      mesNum:mes,trimestre:"T"+Math.ceil((dObj.getMonth()+1)/3)+"/"+dObj.getFullYear(),ano:dObj.getFullYear().toString(),
-      munIni:or[0],ufIni:or[1],munFim:de[0],ufFim:de[1],rota:or[0]+"/"+or[1]+" → "+de[0]+"/"+de[1],
-      tr_orig:tr[0],cnpjTr:tr[1],tr_pad:trI.nome,tr_raiz:trI.raiz,tr_ok:trI.ok,
-      fo_orig:fo[0],cnpjRem:fo[0],fo_pad:remI.nome,st_rem:"",fo_matr:remI.raiz||"",
-      dest_orig:"DESTINO",cnpjTom:tomCNPJ,destinatario:tomI.nome,st_tom:"",
-      cidadeDest:de[0],ufDest:de[1],
-      vFrete:parseFloat(vFrete.toFixed(2)),vMerc:parseFloat(vMerc.toFixed(2)),peso:Math.round(peso),
-      prod:PRODS[i%PRODS.length],pct:vFrete/vMerc*100,rkg:vFrete/peso,tipo_op:op,
-      fil_ori:""==="FILIAL"?remI.nome:"",fil_dest:""==="FILIAL"?tomI.nome:"",
+      chaveCte, nCT:String(1700+i), dhEmi,
+      mesNum:mes,
+      trimestre:"T"+Math.ceil((dObj.getMonth()+1)/3)+"/"+dObj.getFullYear(),
+      ano:dObj.getFullYear().toString(),
+      munIni:or[0],ufIni:or[1],munFim:de[0],ufFim:de[1],
+      rota:or[0]+"/"+or[1]+" → "+de[0]+"/"+de[1],
+      // emitente
+      tr_orig:tr[0], cnpjTr:tr[1], cnpjEmit:tr[1], nomeEmit:tr[0],
+      tr_pad:trI.nome, tr_raiz:trI.raiz, tr_ok:trI.ok,
+      // remetente
+      fo_orig:rem.nome, cnpjRem:rem.cnpj, nomeRem:rem.nome,
+      fo_pad:remI.nome, fo_matr:remI.raiz||"",
+      // expedidor / recebedor (vazios na demo)
+      cnpjExped:"", nomeExped:"", cnpjReceb:"", nomeReceb:"",
+      // destinatário
+      dest_orig:dest.nome, cnpjDest:dest.cnpj, cnpjTom:dest.cnpj,
+      destinatario:tomI.nome, nomeDest:dest.nome,
+      cidadeDest:de[0], ufDest:de[1],
+      // tomador
+      tomaInd:tomaInd, tomaDesc:TOMA_LABELS[parseInt(tomaInd,10)]||"",
+      cnpjTomador:cnpjTomador, nomeTomador:nomeTomador,
+      // financeiro
+      vFrete:parseFloat(vFrete.toFixed(2)),
+      vMerc: parseFloat(vMerc.toFixed(2)),
+      peso:Math.round(peso), pesoCubado:0, volume:0,
+      prod:PRODS[i%PRODS.length], pct:vFrete/vMerc*100, rkg:vFrete/peso,
+      tipo_op:op,
+      st_rem:"", st_tom:"",
+      // filiais — pelo CNPJ completo
+      fil_ori:  isFilialBe8(rem.cnpj)  ? nomeFilialBe8(rem.cnpj)  : "",
+      fil_dest: isFilialBe8(dest.cnpj) ? nomeFilialBe8(dest.cnpj) : "",
     });
     added++;
   }
-  addLog(added+" CT-es demo carregados.","ok");
+  addLog(added+" CT-es demo carregados (mix 2025/2026 + 10 filiais).","ok");
   refresh();
 }
 
@@ -1152,6 +1437,16 @@ function pop(id,vals){
 }
 function populateFilters(){
   const d=window.ALL;
+  // Anos detectados nos dados (preserva 2025 e 2026 mesmo sem dados)
+  const anosSet=new Set(["2025","2026"]);
+  d.forEach(c=>{ if(c.ano) anosSet.add(String(c.ano)); });
+  const elAno=document.getElementById("f-ano");
+  if(elAno){
+    const cur=elAno.value;
+    elAno.innerHTML="<option value=''>Todos</option>"+
+      [...anosSet].sort().map(a=>`<option value="${a}">${a}</option>`).join("");
+    if(cur) elAno.value=cur;
+  }
   pop("f-mes",d.map(c=>c.mesNum));
   pop("f-tri",d.map(c=>c.trimestre));
   pop("f-tr",d.map(c=>c.tr_pad));
@@ -1165,18 +1460,20 @@ function populateFilters(){
 }
 function gv(id){return document.getElementById(id)?.value||"";}
 function applyFilters(){
-  const mes=gv("f-mes"),tri=gv("f-tri"),op=gv("f-op"),tr=gv("f-tr"),fo=gv("f-fo"),uf=gv("f-uf"),fori=gv("f-fori"),fdest=gv("f-fdest"),prod=gv("f-prod"),ori=gv("f-ori"),dest=gv("f-dest");
+  const ano=gv("f-ano"),mes=gv("f-mes"),tri=gv("f-tri"),op=gv("f-op"),tr=gv("f-tr"),fo=gv("f-fo"),uf=gv("f-uf"),fori=gv("f-fori"),fdest=gv("f-fdest"),prod=gv("f-prod"),ori=gv("f-ori"),dest=gv("f-dest");
   FIL=window.ALL.filter(c=>
+    (!ano||String(c.ano)===ano)&&
     (!mes||c.mesNum===mes)&&(!tri||c.trimestre===tri)&&(!op||c.tipo_op===op)&&
     (!tr||c.tr_pad===tr)&&(!fo||c.fo_pad===fo)&&
     (!uf||c.ufFim===uf)&&(!fori||c.fil_ori===fori)&&(!fdest||c.fil_dest===fdest)&&
     (!prod||c.prod===prod)&&(!ori||c.munIni===ori)&&(!dest||c.munFim===dest)
   );
+  page=1;
   renderDash(FIL);
 }
 function clearFilters(){
-  ["f-mes","f-tri","f-op","f-tr","f-fo","f-uf","f-fori","f-fdest","f-prod","f-ori","f-dest"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
-  FIL=[...window.ALL];renderDash(FIL);
+  ["f-ano","f-mes","f-tri","f-op","f-tr","f-fo","f-uf","f-fori","f-fdest","f-prod","f-ori","f-dest"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  FIL=[...window.ALL];page=1;renderDash(FIL);
 }
 
 /* ══════════════════════════════════════════════
@@ -1379,12 +1676,24 @@ function renderInsights(data){
   const pesoBaixo=data.filter(c=>c.peso<avgP*0.5&&c.peso>0);
   const rkgAlto=data.filter(c=>(c.rkg||0)>avgRkg*2&&c.peso>0);
   const trTopConc=trRank[0]?fS(byTr[trRank[0]])/fS(data)*100:0;
+
+  // ── REGRA: "Melhor Eficiência R$/kg" ignora CT-es com peso < 0.0100 kg ──
+  // Sem esse filtro, fretes com peso quase zero geram R$/kg artificialmente baixo.
+  const PESO_MIN_EFIC = 0.0100;
+  const byTrEfic = {};
+  Object.keys(byTr).forEach(function(k){
+    const valid = byTr[k].filter(function(c){ return (c.peso||0) >= PESO_MIN_EFIC; });
+    if(valid.length) byTrEfic[k] = valid;
+  });
+  const trKeysEfic = Object.keys(byTrEfic);
+  const trMaisEficNome = trKeysEfic.sort((a,b)=>rA(byTrEfic[a])-rA(byTrEfic[b]))[0]||"–";
+  const trMaisEficVal  = trKeysEfic.length ? rA(byTrEfic[trMaisEficNome]) : 0;
   let tend=null;
   if(mK.length>=2){const u=mK[mK.length-1],p=mK[mK.length-2];const vU=fS(byMes[u]),vP=fS(byMes[p]);const df=vU-vP,pc=Math.abs(df/vP*100);tend={dir:df>0?"↑":"↓",pct:pc,ult:u,pen:p,vU,vP};}
   const mkI=(icon,title,val,desc,cls,key,extraData=null)=>({icon,title,val,desc,cls,key,extraData});
   const sec1=[
     mkI("🚛","Transp. Maior Custo","R$ "+fmtB(fS(byTr[trRank[0]]||[])),(trRank[0]||"–")+" lidera em custo total.","al","tr_top"),
-    mkI("⚡","Melhor Eficiência (R$/kg)","R$ "+(rA(byTr[Object.keys(byTr).sort((a,b)=>rA(byTr[a])-rA(byTr[b]))[0]]||[])).toFixed(4),(Object.keys(byTr).sort((a,b)=>rA(byTr[a])-rA(byTr[b]))[0]||"–")+" tem o menor R$/kg.","ok","tr_rkg"),
+    mkI("⚡","Melhor Eficiência (R$/kg)","R$ "+trMaisEficVal.toFixed(4),trMaisEficNome+" tem o menor R$/kg (peso ≥ "+PESO_MIN_EFIC.toFixed(4)+" kg).","ok","tr_rkg"),
     mkI("🏭","Fornecedor Maior Volume",fmtB(pS(byFo[foRank[0]]||[]))+" kg",(foRank[0]||"–")+" movimentou o maior peso.","in","fo_top"),
     mkI("🔀","Operação Dominante",(opRank[0]?.[0]||"–")+" · R$ "+fmtB(opRank[0]?.[1]?fS(opRank[0][1]):0),"Tipo de operação com maior frete no período.","in","op_dom"),
     mkI("📊","% Frete/Merc Médio",avgPct.toFixed(2)+"%",avgPct>5?"⚠️ Acima da meta de 5% — revisar contratos.":"✓ Dentro da meta de 5%.","ok","pct_med"),
@@ -1429,7 +1738,13 @@ function openInsD(key){
   const fS=a=>(a||[]).reduce((s,c)=>s+c.vFrete,0);
   let items=[],title="",extra="";
   if(key==="tr_top"){const byTr=gb(data,"tr_pad");const top=Object.keys(byTr).sort((a,b)=>fS(byTr[b])-fS(byTr[a]))[0]||"";items=byTr[top]||[];title="🚛 CT-es · "+top;}
-  else if(key==="tr_rkg"){const byTr=gb(data,"tr_pad");const rA=a=>{const f=fS(a),p=(a||[]).reduce((s,c)=>s+c.peso,0);return p>0?f/p:0;};const top=Object.keys(byTr).sort((a,b)=>rA(byTr[a])-rA(byTr[b]))[0]||"";items=byTr[top]||[];title="⚡ Mais Eficiente · "+top;}
+  else if(key==="tr_rkg"){
+    const PESO_MIN_EFIC=0.0100;
+    const byTr=gb(data.filter(c=>(c.peso||0)>=PESO_MIN_EFIC),"tr_pad");
+    const rA=a=>{const f=fS(a),p=(a||[]).reduce((s,c)=>s+c.peso,0);return p>0?f/p:0;};
+    const top=Object.keys(byTr).sort((a,b)=>rA(byTr[a])-rA(byTr[b]))[0]||"";
+    items=byTr[top]||[];title="⚡ Mais Eficiente · "+top+" (peso ≥ 0,0100 kg)";
+  }
   else if(key==="fo_top"){const byFo=gb(data,"fo_pad");const top=Object.keys(byFo).sort((a,b)=>fS(byFo[b])-fS(byFo[a]))[0]||"";items=byFo[top]||[];title="🏭 CT-es · "+top;}
   else if(key==="op_dom"){const byOp=gb(data,"tipo_op");const top=Object.keys(byOp).sort((a,b)=>fS(byOp[b])-fS(byOp[a]))[0]||"";items=byOp[top]||[];title="🔀 Operação Dominante · "+top;}
   else if(key==="outliers"){const avgF=fS(data)/data.length;items=data.filter(c=>c.vFrete>avgF*2);title="⚠️ CT-es Outlier (>2× média)";extra=`<div class="al-box">Média: R$ ${fmt(avgF)} · Limiar: R$ ${fmt(avgF*2)}</div>`;}
@@ -1504,6 +1819,28 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeMo();});
    TABLE
 ══════════════════════════════════════════════ */
 function oBK(op){return{COMPRA:"bg",VENDA:"bb",TRANSFERENCIA:"bw",OUTROS:"bp"}[op]||"bgr";}
+// Helpers de formatação para a tabela analítica
+function fmtCNPJ(c){
+  c=String(c||"").replace(/\D/g,"");
+  if(c.length===14) return c.slice(0,2)+"."+c.slice(2,5)+"."+c.slice(5,8)+"/"+c.slice(8,12)+"-"+c.slice(12,14);
+  if(c.length===11) return c.slice(0,3)+"."+c.slice(3,6)+"."+c.slice(6,9)+"-"+c.slice(9,11);
+  return c||"–";
+}
+function fmtTon(kg){
+  // Peso em kg ÷ 1000 → toneladas (regra do relatório)
+  const t=(kg||0)/1000;
+  return new Intl.NumberFormat("pt-BR",{minimumFractionDigits:3,maximumFractionDigits:3}).format(t);
+}
+function fmtRton(rkg){
+  // R$/kg × 1000 → R$/tonelada (regra do relatório)
+  const v=(rkg||0)*1000;
+  return new Intl.NumberFormat("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}).format(v);
+}
+function abbr(txt,n){
+  txt=String(txt||"");
+  return txt.length>n ? txt.slice(0,n-1)+"…" : txt;
+}
+
 function renderTbl(data){
   const sorted=[...data].sort((a,b)=>{let va=a[sortF]||"",vb=b[sortF]||"";if(typeof va==="number")return sortD==="asc"?va-vb:vb-va;return sortD==="asc"?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));});
   const q=(document.getElementById("tbl-s")?.value||"").toLowerCase();
@@ -1512,25 +1849,32 @@ function renderTbl(data){
   const pages=Math.ceil(sf.length/RPP);if(page>pages)page=1;
   const start=(page-1)*RPP,pd=sf.slice(start,start+RPP);
   document.getElementById("tbl-b").innerHTML=pd.map(c=>`<tr>
-    <td><span class="bk bb">${c.nCT}</span></td>
     <td>${fmtD(c.dhEmi)}</td>
-    <td><span class="bk ${oBK(c.tipo_op)}">${c.tipo_op}</span></td>
-    <td class="tx">${c.tr_pad}${!c.tr_ok?"<sup style='color:var(--warn);font-size:8px'>★</sup>":""}</td>
-    <td class="tx">${c.fo_pad}</td>
-    <td><span class="bk ${c.st_rem==="FILIAL"?"bg":c.st_rem==="IMPOR/EXPOR"?"bw":"bgr"}">${c.st_rem||"?"}</span></td>
-    <td><span class="bk ${c.st_tom==="FILIAL"?"bg":c.st_tom==="IMPOR/EXPOR"?"bw":"bgr"}">${c.st_tom||"?"}</span></td>
-    <td class="tx">${c.munIni}</td><td class="tx">${c.munFim}</td>
-    <td><span class="bk bb">${c.ufFim}</span></td>
-    <td>${fmtN(c.peso||0)}</td>
+    <td><span class="bk bb">${c.nCT||"–"}</span></td>
+    <td title="${c.chaveCte||""}" style="font-size:9px;color:var(--text3)">${abbr(c.chaveCte,18)}</td>
+    <td style="font-size:9px">${fmtCNPJ(c.cnpjEmit||c.cnpjTr)}</td>
+    <td class="tx" title="${c.nomeEmit||c.tr_orig||""}">${abbr(c.nomeEmit||c.tr_pad||c.tr_orig,28)}</td>
+    <td style="font-size:9px">${fmtCNPJ(c.cnpjRem)}</td>
+    <td class="tx" title="${c.nomeRem||c.fo_orig||""}">${abbr(c.nomeRem||c.fo_pad||c.fo_orig,28)}</td>
+    <td style="font-size:9px">${fmtCNPJ(c.cnpjDest||c.cnpjTom)}</td>
+    <td class="tx" title="${c.nomeDest||c.dest_orig||c.destinatario||""}">${abbr(c.nomeDest||c.destinatario||c.dest_orig,28)}</td>
+    <td style="text-align:center"><span class="bk ${c.tomaInd==="3"?"bg":c.tomaInd==="0"?"bb":c.tomaInd==="4"?"bw":"bgr"}">${c.tomaInd||"–"}</span></td>
+    <td class="tx" style="font-size:10px">${c.tomaDesc||"–"}</td>
+    <td style="font-size:9px">${fmtCNPJ(c.cnpjTomador)}</td>
+    <td class="tx" title="${c.nomeTomador||""}">${abbr(c.nomeTomador,24)}</td>
+    <td style="font-weight:600">${fmtTon(c.peso)}</td>
     <td style="color:var(--acc1);font-weight:600">${fmt(c.vFrete)}</td>
     <td>${fmt(c.vMerc)}</td>
+    <td class="tx">${c.munIni||"–"}</td>
+    <td><span class="bk bb">${c.ufIni||"–"}</span></td>
+    <td class="tx">${c.munFim||"–"}</td>
+    <td><span class="bk bb">${c.ufFim||"–"}</span></td>
+    <td class="tx" title="${c.prod||""}">${abbr(c.prod,18)}</td>
+    <td><span class="bk ${oBK(c.tipo_op)}">${c.tipo_op}</span></td>
+    <td class="tx" style="font-size:10px">${c.fil_ori||"–"}</td>
+    <td class="tx" style="font-size:10px">${c.fil_dest||"–"}</td>
     <td style="color:${(c.pct||0)>5?"var(--danger)":"var(--acc1)"}">${(c.pct||0).toFixed(2)}%</td>
-    <td>${(c.rkg||0).toFixed(4)}</td>
-    <td class="tx">${c.prod}</td>
-    <td class="tx">${c.fil_ori||"–"}</td><td class="tx">${c.fil_dest||"–"}</td>
-    <td class="tx" style="color:var(--text3);font-size:9px">${c.tr_orig}</td>
-    <td style="color:var(--text3);font-size:9px">${c.tr_raiz}</td>
-    <td style="color:var(--text3);font-size:9px">${c.fo_matr}</td>
+    <td style="color:var(--acc2);font-weight:600">${fmtRton(c.rkg)}</td>
   </tr>`).join("");
   document.getElementById("pag-i").textContent=`${start+1}–${Math.min(start+RPP,sf.length)} de ${sf.length}`;
   let btns=`<button class="pbtn" onclick="gp(${page-1})" ${page<=1?"disabled":""}>‹</button>`;
@@ -1570,19 +1914,47 @@ function clearLogs(){document.getElementById("log").innerHTML="<div class='li'>L
 ══════════════════════════════════════════════ */
 function exportExcel(){
   if(!FIL.length){alert("Sem dados.");return;}
+  // Colunas obrigatórias do relatório (regra do projeto):
+  // Peso em toneladas (kg ÷ 1000) e R$/Tonelada (rkg × 1000)
   const rows=FIL.map(c=>({
-    "Chave CT-e":c.chaveCte,"Número":c.nCT,"Data":fmtD(c.dhEmi),"Mês":c.mesNum,"Trimestre":c.trimestre,
-    "Tipo Operação":c.tipo_op,
-    "Transportadora Original":c.tr_orig,"Transportadora Padronizada":c.tr_pad,"CNPJ Raiz Tr.":c.tr_raiz,"Padronizado":c.tr_ok?"Sim":"Não",
-    "Fornecedor Original":c.fo_orig,"Fornecedor Padronizado":c.fo_pad,"Status Remetente":c.st_rem,"CNPJ Matriz Fo.":c.fo_matr,
-    "Destinatário":c.destinatario,"Status Tomador":c.st_tom,
-    "Filial Origem":c.fil_ori,"Filial Destino":c.fil_dest,
-    "Cidade Origem":c.munIni,"UF Origem":c.ufIni,"Cidade Destino":c.munFim,"UF Destino":c.ufFim,"Rota":c.rota,
-    "Peso (kg)":c.peso,"Frete (R$)":c.vFrete,"Mercadoria (R$)":(c.vMerc||c.vMercadoria||0),"% Frete":(c.pct||0).toFixed(4),"R$/kg":(c.rkg||0).toFixed(4),"Produto":c.prod,
+    "Data":fmtD(c.dhEmi),
+    "Nº CT-e":c.nCT||"",
+    "Chave CT-e":c.chaveCte||"",
+    "CNPJ Emitente":fmtCNPJ(c.cnpjEmit||c.cnpjTr),
+    "Nome Emitente (Transportadora)":c.nomeEmit||c.tr_pad||c.tr_orig||"",
+    "CNPJ Remetente":fmtCNPJ(c.cnpjRem),
+    "Nome Remetente":c.nomeRem||c.fo_pad||c.fo_orig||"",
+    "CNPJ Destinatário":fmtCNPJ(c.cnpjDest||c.cnpjTom),
+    "Nome Destinatário":c.nomeDest||c.destinatario||c.dest_orig||"",
+    "Tomador (cód)":c.tomaInd||"",
+    "Tomador (tipo)":c.tomaDesc||"",
+    "CNPJ Tomador":fmtCNPJ(c.cnpjTomador),
+    "Nome Tomador":c.nomeTomador||"",
+    "Peso (toneladas)":Number(((c.peso||0)/1000).toFixed(4)),
+    "Valor Frete (R$)":Number((c.vFrete||0).toFixed(2)),
+    "Valor Mercadoria (R$)":Number((c.vMerc||c.vMercadoria||0).toFixed(2)),
+    "Cidade Origem (Remetente)":c.munIni||"",
+    "UF Origem":c.ufIni||"",
+    "Cidade Destino":c.munFim||"",
+    "UF Destino":c.ufFim||"",
+    "Produto (proPred)":c.prod||"",
+    "Tipo Operação":c.tipo_op||"",
+    "Filial Origem":c.fil_ori||"",
+    "Filial Destino":c.fil_dest||"",
+    "% Frete":Number((c.pct||0).toFixed(4)),
+    "R$/Tonelada":Number(((c.rkg||0)*1000).toFixed(2)),
+    // Auxiliares (úteis para conferência):
+    "Peso bruto (kg) [original]":Number((c.peso||0).toFixed(3)),
+    "R$/kg [original]":Number((c.rkg||0).toFixed(4)),
+    "Mês":c.mesNum||"",
+    "Trimestre":c.trimestre||"",
+    "Ano":c.ano||"",
+    "Rota":c.rota||"",
   }));
   const ws=XLSX.utils.json_to_sheet(rows);
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"CT-es");
   XLSX.writeFile(wb,"Be8_CTE_v2_"+new Date().toISOString().slice(0,10)+".xlsx");
+  addLog("Excel exportado: "+rows.length+" registros.","ok");
 }
 
 /* ══════════════════════════════════════════════
@@ -1794,84 +2166,10 @@ function fmtBig(n){
 // alias
 var fmtB=fmtBig;
 
-/* ════ PERFORMANCE TABLES ════ */
-function calcPerf(items){
-  var vFrete=items.reduce(function(s,c){return s+(c.vFrete||0);},0);
-  var vMerc=items.reduce(function(s,c){return s+(c.vMerc||c.vMercadoria||0);},0);
-  var peso=items.reduce(function(s,c){return s+(c.peso||0);},0);
-  var pct=vMerc>0?vFrete/vMerc*100:0;
-  var rkg=peso>0?vFrete/peso:0;
-  return{vFrete:vFrete,vMerc:vMerc,peso:peso,pct:pct,rkg:rkg,ctes:items.length};
-}
-
-function renderPerfTables(data){
-  var fS=function(a){return (a||[]).reduce(function(s,c){return s+(c.vFrete||0);},0);};
-  var byTr=gb(data,"tr_pad");
-  var byFo=gb(data,"fo_pad");
-
-  // Transportadoras
-  var trRows=Object.entries(byTr).sort(function(a,b){return fS(b[1])-fS(a[1]);});
-  var tbody=document.getElementById("pt-tr-b");
-  if(tbody) tbody.innerHTML=trRows.map(function(e){
-    var n=e[0],p=calcPerf(e[1]);
-    var pCls=p.pct>5?"wr":"hi";
-    return "<tr><td class='nm'>"+n+"</td><td class='hi'>R$ "+fmtBig(p.vFrete)+"</td><td>R$ "+fmtBig(p.vMerc)+"</td><td class='"+pCls+"'>"+fmtPct(p.pct)+"</td><td>"+fmtP(p.peso)+"</td><td>"+fmtRkg(p.rkg)+"</td><td style='color:#fff;font-weight:700'>"+p.ctes+"</td></tr>";
-  }).join("");
-
-  // Fornecedores
-  var foRows=Object.entries(byFo).sort(function(a,b){return fS(b[1])-fS(a[1]);});
-  var ftbody=document.getElementById("pt-fo-b");
-  if(ftbody) ftbody.innerHTML=foRows.map(function(e){
-    var n=e[0],p=calcPerf(e[1]);
-    var pCls=p.pct>5?"wr":"hi";
-    return "<tr><td class='nm'>"+n+"</td><td class='hi'>R$ "+fmtBig(p.vFrete)+"</td><td>R$ "+fmtBig(p.vMerc)+"</td><td class='"+pCls+"'>"+fmtPct(p.pct)+"</td><td>"+fmtP(p.peso)+"</td><td>"+fmtRkg(p.rkg)+"</td><td style='color:#fff;font-weight:700'>"+p.ctes+"</td></tr>";
-  }).join("");
-
-  // Filiais
-  var filiais={};
-  data.forEach(function(c){
-    if(c.fil_ori){if(!filiais[c.fil_ori])filiais[c.fil_ori]={items:[],papel:"Origem"};filiais[c.fil_ori].items.push(c);}
-    if(c.fil_dest&&c.fil_dest!==c.fil_ori){if(!filiais[c.fil_dest])filiais[c.fil_dest]={items:[],papel:"Destino"};filiais[c.fil_dest].items.push(c);}
-  });
-  var filRows=Object.entries(filiais).sort(function(a,b){return fS(b[1].items)-fS(a[1].items);});
-  var fitbody=document.getElementById("pt-fi-b");
-  if(fitbody) fitbody.innerHTML=filRows.map(function(e){
-    var n=e[0],papel=e[1].papel,p=calcPerf(e[1].items);
-    var pCls=p.pct>5?"wr":"hi";
-    var papelCls=papel==="Origem"?"bg":papel==="Destino"?"bb":"bgr";
-    return "<tr><td class='nm'>"+n+"</td><td><span class='bk "+papelCls+"'>"+papel+"</span></td><td class='hi'>R$ "+fmtBig(p.vFrete)+"</td><td>R$ "+fmtBig(p.vMerc)+"</td><td class='"+pCls+"'>"+fmtPct(p.pct)+"</td><td>"+fmtP(p.peso)+"</td><td>"+fmtRkg(p.rkg)+"</td><td style='color:#fff;font-weight:700'>"+p.ctes+"</td></tr>";
-  }).join("");
-}
-
-/* ════ SORT PERF TABLE ════ */
-var perfSortDir={};
-function sortPerf(tableId,colIdx){
-  var key=tableId+"-"+colIdx;
-  var asc=perfSortDir[key]!==true;
-  perfSortDir[key]=asc;
-  var tbl=document.getElementById(tableId);
-  if(!tbl) return;
-  tbl.querySelectorAll("th").forEach(function(th){th.classList.remove("sa","sd");});
-  var ths=tbl.querySelectorAll("th");
-  if(ths[colIdx]) ths[colIdx].classList.add(asc?"sa":"sd");
-  var rows=Array.from(tbl.querySelector("tbody").querySelectorAll("tr"));
-  rows.sort(function(a,b){
-    var ta=a.querySelectorAll("td")[colIdx];
-    var tb=b.querySelectorAll("td")[colIdx];
-    var va=ta?ta.textContent.trim():"";
-    var vb=tb?tb.textContent.trim():"";
-    var na=parseFloat(va.replace(/[^0-9,\.\-]/g,"").replace(",","."));
-    var nb=parseFloat(vb.replace(/[^0-9,\.\-]/g,"").replace(",","."));
-    if(!isNaN(na)&&!isNaN(nb)){
-      if(va.includes("M")||va.includes("T")) na*=(va.includes("MT")?1e6:va.includes("M")?1e6:1e3);
-      if(vb.includes("M")||vb.includes("T")) nb*=(vb.includes("MT")?1e6:vb.includes("M")?1e6:1e3);
-      return asc?na-nb:nb-na;
-    }
-    return asc?va.localeCompare(vb):vb.localeCompare(va);
-  });
-  var tbody=tbl.querySelector("tbody");
-  rows.forEach(function(r){tbody.appendChild(r);});
-}
+/* ════ PERFORMANCE TABLES (legado removido — substituído por renderAllPerfTables / pfSort) ════ */
+// As funções renderPerfTables, calcPerf e sortPerf foram removidas pois apontavam
+// para IDs antigos (pt-tr-b, pt-fo-b, pt-fi-b) que não existem mais no HTML.
+// O sistema atual usa renderAllPerfTables + pfSort + tabelas pf-tr / pf-fo / pf-fi / pf-ro.
 
 /* ════ DEMO TOOLTIP FIX ════ */
 window.DEMO_TOOLTIP="Carrega 63 CT-es simulados com múltiplas transportadoras, fornecedores, filiais e tipos de operação (VENDA, COMPRA, TRANSFERÊNCIA) para testar todas as funcionalidades sem precisar de arquivos reais. Os dados cobrem 7 meses com variações realistas de frete e mercadoria.";
